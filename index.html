@@ -517,7 +517,6 @@
             border-bottom: 2px solid var(--accent);
         }
         
-        /* story viewer refined */
         .story-viewer {
             position: fixed;
             top: 0;
@@ -584,7 +583,7 @@
             cursor: pointer;
             z-index: 1002;
         }
-        .story-media {
+        .story-media-img, .story-media-video {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -845,17 +844,15 @@
 </div>
 
 <script>
-    // ---------- DATA WITH STORY OBJECTS ----------
+    // ---------- DATA ----------
     const currentUserId = 'you';
-    let currentUser = { id: currentUserId, username: 'you', name: 'Your Name', avatar: '🌸', avatarUrl: null, bio: 'just blooming ✨', link: 'https://verve.app/you', stories: [] }; // stories: array of {mediaUrl, type}
-    
+    let currentUser = { id: currentUserId, username: 'you', name: 'Your Name', avatar: '🌸', avatarUrl: null, bio: 'just blooming ✨', link: 'https://verve.app/you', stories: [] };
     const dummyUsers = [
-        { id: 'u1', username: 'elenabloom', avatar: '🌿', avatarUrl: null, name: 'Elena Bloom', stories: [{mediaUrl: 'https://picsum.photos/seed/s1_1/400/600', type: 'image'}, {mediaUrl: 'https://picsum.photos/seed/s1_2/400/600', type: 'image'}] },
-        { id: 'u2', username: 'savvyplate', avatar: '🍋', avatarUrl: null, name: 'Savvy Plate', stories: [{mediaUrl: 'https://picsum.photos/seed/s2_1/400/600', type: 'image'}] },
-        { id: 'u3', username: 'mindfultech', avatar: '✨', avatarUrl: null, name: 'Mindful Tech', stories: [{mediaUrl: 'https://picsum.photos/seed/s3_1/400/600', type: 'image'}] },
-        { id: 'u4', username: 'wildfolks', avatar: '🌾', avatarUrl: null, name: 'Wild Folks', stories: [{mediaUrl: 'https://picsum.photos/seed/s4_1/400/600', type: 'image'}] },
+        { id: 'u1', username: 'elenabloom', avatar: '🌿', avatarUrl: null, name: 'Elena Bloom', stories: [{ url: 'https://picsum.photos/seed/s1_1/400/600', type: 'image' }, { url: 'https://picsum.photos/seed/s1_2/400/600', type: 'image' }] },
+        { id: 'u2', username: 'savvyplate', avatar: '🍋', avatarUrl: null, name: 'Savvy Plate', stories: [{ url: 'https://picsum.photos/seed/s2_1/400/600', type: 'image' }] },
+        { id: 'u3', username: 'mindfultech', avatar: '✨', avatarUrl: null, name: 'Mindful Tech', stories: [{ url: 'https://picsum.photos/seed/s3_1/400/600', type: 'image' }] },
+        { id: 'u4', username: 'wildfolks', avatar: '🌾', avatarUrl: null, name: 'Wild Folks', stories: [{ url: 'https://picsum.photos/seed/s4_1/400/600', type: 'image' }] },
     ];
-    
     let posts = [
         { id: 1, userId: 'u1', type: 'image', mediaUrl: 'https://picsum.photos/id/20/800/800', caption: 'Morning pages & coffee ☕️', likes: 243, likedBy: [], comments: [], repostedBy: [] },
         { id: 2, userId: 'u2', type: 'image', mediaUrl: 'https://picsum.photos/id/30/800/800', caption: 'Farmers market haul 🥬', likes: 891, likedBy: [currentUserId], comments: [], repostedBy: [] },
@@ -879,44 +876,68 @@
     function toggleLike(item, isThought = false) { const target = isThought ? thoughts.find(t => t.id === item.id) : posts.find(p => p.id === item.id); if (!target) return; const hasLiked = target.likedBy.includes(currentUserId); hasLiked ? target.likedBy = target.likedBy.filter(id => id !== currentUserId) : target.likedBy.push(currentUserId); target.likes = target.likedBy.length; refreshCurrentView(); }
     function toggleRepost(item, isThought = false) { const target = isThought ? thoughts.find(t => t.id === item.id) : posts.find(p => p.id === item.id); if (!target) return; const hasReposted = target.repostedBy.includes(currentUserId); hasReposted ? target.repostedBy = target.repostedBy.filter(id => id !== currentUserId) : target.repostedBy.push(currentUserId); refreshCurrentView(); }
     
-    function deleteOwnPost(itemId, isThought) { if (isThought) { const index = thoughts.findIndex(t => t.id === itemId); if (index !== -1 && thoughts[index].userId === currentUserId) thoughts.splice(index, 1); } else { const index = posts.findIndex(p => p.id === itemId); if (index !== -1 && posts[index].userId === currentUserId) posts.splice(index, 1); } refreshCurrentView(); if (profileTab === 'posts') renderProfile(); else renderProfile(); }
-    function undoRepost(itemId, isThought) { const target = isThought ? thoughts.find(t => t.id === itemId) : posts.find(p => p.id === itemId); if (target && target.repostedBy.includes(currentUserId)) { target.repostedBy = target.repostedBy.filter(id => id !== currentUserId); refreshCurrentView(); if (profileTab === 'reposts') renderProfile(); else renderProfile(); } }
+    // ----- DELETE POST / UNDO REPOST -----
+    function deleteOwnPost(itemId, isThought) {
+        if (isThought) {
+            const index = thoughts.findIndex(t => t.id === itemId);
+            if (index !== -1 && thoughts[index].userId === currentUserId) thoughts.splice(index, 1);
+        } else {
+            const index = posts.findIndex(p => p.id === itemId);
+            if (index !== -1 && posts[index].userId === currentUserId) posts.splice(index, 1);
+        }
+        refreshCurrentView();
+        if (profileTab === 'posts') renderProfile(); else renderProfile();
+    }
+    function undoRepost(itemId, isThought) {
+        const target = isThought ? thoughts.find(t => t.id === itemId) : posts.find(p => p.id === itemId);
+        if (target && target.repostedBy.includes(currentUserId)) {
+            target.repostedBy = target.repostedBy.filter(id => id !== currentUserId);
+            refreshCurrentView();
+            if (profileTab === 'reposts') renderProfile(); else renderProfile();
+        }
+    }
     
-    // ----- SHARE TO DM (unchanged) -----
+    // ----- RICH SHARE TO DM (unchanged) -----
     let pendingShareItem = null;
-    function sharePendingToUser(targetUser) { const item = pendingShareItem; if(!item) return; let thread = dmThreads.find(t => t.username === targetUser.username); if(!thread) { const newId = `dm_${targetUser.id}`; thread = { id: newId, username: targetUser.username, avatar: targetUser.avatar, avatarUrl: targetUser.avatarUrl, lastMessage: "", lastSenderId: currentUserId, messages: [] }; dmThreads.unshift(thread); } const owner = item.userId ? getUserById(item.userId) : currentUser; const sharedCard = { type: 'shared_item', originalType: item.type || (item.text ? 'thought' : 'post'), caption: item.caption || item.text || '', mediaUrl: item.mediaUrl || null, authorName: owner.username, authorAvatar: owner.avatarUrl || owner.avatar, itemId: item.id }; thread.messages.push({ senderId: currentUserId, rich: sharedCard, textFallback: `📤 Shared: ${sharedCard.caption.substring(0, 60)}` }); thread.lastMessage = `📤 Shared: ${sharedCard.caption.substring(0, 40)}`; thread.lastSenderId = currentUserId; closeModal(); alert(`✨ Shared to ${targetUser.username}! Check DMs.`); refreshCurrentView(); }
-    function openShareModalById(itemId, isThought = false) { let item = isThought ? thoughts.find(t => t.id === itemId) : posts.find(p => p.id === itemId); if(!item) return; pendingShareItem = item; let shareHtml = `<h3>Share to DM</h3><div class="share-grid">`; [...dummyUsers, currentUser].forEach(user => { shareHtml += `<div class="share-row"><div class="share-user"><div class="post-avatar">${user.avatarUrl ? `<img src="${user.avatarUrl}">` : user.avatar}</div><b>${user.username}</b></div><button class="send-btn-sm" onclick="sharePendingToUser({ id: '${user.id}', username: '${user.username}', avatar: '${user.avatar}', avatarUrl: '${user.avatarUrl || ''}' })">Send</button></div>`; }); shareHtml += `</div><button onclick="closeModal()" style="margin-top:20px; padding:12px; width:100%; background:var(--border); border:none; border-radius:40px;">Cancel</button>`; openModal(shareHtml); }
+    function sharePendingToUser(targetUser) {
+        const item = pendingShareItem;
+        if(!item) return;
+        let thread = dmThreads.find(t => t.username === targetUser.username);
+        if(!thread) {
+            const newId = `dm_${targetUser.id}`;
+            thread = { id: newId, username: targetUser.username, avatar: targetUser.avatar, avatarUrl: targetUser.avatarUrl, lastMessage: "", lastSenderId: currentUserId, messages: [] };
+            dmThreads.unshift(thread);
+        }
+        const owner = item.userId ? getUserById(item.userId) : currentUser;
+        const sharedCard = {
+            type: 'shared_item',
+            originalType: item.type || (item.text ? 'thought' : 'post'),
+            caption: item.caption || item.text || '',
+            mediaUrl: item.mediaUrl || null,
+            authorName: owner.username,
+            authorAvatar: owner.avatarUrl || owner.avatar,
+            itemId: item.id
+        };
+        thread.messages.push({ senderId: currentUserId, rich: sharedCard, textFallback: `📤 Shared: ${sharedCard.caption.substring(0, 60)}` });
+        thread.lastMessage = `📤 Shared: ${sharedCard.caption.substring(0, 40)}`;
+        thread.lastSenderId = currentUserId;
+        closeModal();
+        alert(`✨ Shared to ${targetUser.username}! Check DMs.`);
+        refreshCurrentView();
+    }
+    function openShareModalById(itemId, isThought = false) {
+        let item = isThought ? thoughts.find(t => t.id === itemId) : posts.find(p => p.id === itemId);
+        if(!item) return;
+        pendingShareItem = item;
+        let shareHtml = `<h3>Share to DM</h3><div class="share-grid">`;
+        [...dummyUsers, currentUser].forEach(user => {
+            shareHtml += `<div class="share-row"><div class="share-user"><div class="post-avatar">${user.avatarUrl ? `<img src="${user.avatarUrl}">` : user.avatar}</div><b>${user.username}</b></div><button class="send-btn-sm" onclick="sharePendingToUser({ id: '${user.id}', username: '${user.username}', avatar: '${user.avatar}', avatarUrl: '${user.avatarUrl || ''}' })">Send</button></div>`;
+        });
+        shareHtml += `</div><button onclick="closeModal()" style="margin-top:20px; padding:12px; width:100%; background:var(--border); border:none; border-radius:40px;">Cancel</button>`;
+        openModal(shareHtml);
+    }
     
-    // ----- STORY VIEWER (FIXED: only one user's stories) -----
-    let currentStoryQueue = []; let currentStoryIndex = 0;
-    function startStoryViewer(user) { 
-        if (!user.stories || user.stories.length === 0) { alert("✨ No stories to show. Add a story!"); return; }
-        currentStoryQueue = user.stories.map(story => ({ media: story.mediaUrl, type: story.type, user: user }));
-        currentStoryIndex = 0;
-        showStoryViewer(); 
-    }
-    function showStoryViewer() { 
-        if (currentStoryIndex >= currentStoryQueue.length) { closeStoryViewer(); return; } 
-        const item = currentStoryQueue[currentStoryIndex]; 
-        const avatarHtml = item.user.avatarUrl ? `<img src="${item.user.avatarUrl}">` : item.user.avatar; 
-        const mediaElement = item.type === 'video' 
-            ? `<video class="story-media" src="${item.media}" autoplay muted playsinline></video>` 
-            : `<img class="story-media" src="${item.media}" alt="story">`;
-        const viewerDiv = document.createElement('div'); 
-        viewerDiv.className = 'story-viewer'; 
-        viewerDiv.id = 'storyViewer'; 
-        viewerDiv.innerHTML = `<div class="story-viewer-content"><div class="story-header"><div class="story-header-avatar">${avatarHtml}</div><span>${item.user.username}</span><span style="margin-left:8px; font-size:12px;">${currentStoryIndex+1}/${currentStoryQueue.length}</span></div><div class="story-close" id="storyCloseBtn">✕</div><div class="story-nav-left" id="storyLeftZone"></div><div class="story-nav-right" id="storyRightZone"></div>${mediaElement}</div>`; 
-        document.body.appendChild(viewerDiv); 
-        const leftZone = document.getElementById('storyLeftZone');
-        const rightZone = document.getElementById('storyRightZone');
-        const closeBtn = document.getElementById('storyCloseBtn');
-        leftZone?.addEventListener('click', (e) => { e.stopPropagation(); if (currentStoryIndex > 0) { currentStoryIndex--; closeStoryViewer(); showStoryViewer(); } });
-        rightZone?.addEventListener('click', (e) => { e.stopPropagation(); if (currentStoryIndex < currentStoryQueue.length - 1) { currentStoryIndex++; closeStoryViewer(); showStoryViewer(); } else { closeStoryViewer(); } });
-        closeBtn?.addEventListener('click', () => closeStoryViewer());
-        const videoEl = viewerDiv.querySelector('video');
-        if (videoEl) videoEl.play().catch(e=>console.log("autoplay blocked"));
-    }
-    function closeStoryViewer() { document.getElementById('storyViewer')?.remove(); }
+    // ---------- SIMPLE, RELIABLE STORY SYSTEM ----------
     function addStoryFromPicker() {
         const input = document.getElementById('storyMediaInput');
         input.value = '';
@@ -925,41 +946,192 @@
             const file = e.target.files[0];
             if (!file) return;
             const url = URL.createObjectURL(file);
-            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            const isVideo = file.type.startsWith('video/');
             if (!currentUser.stories) currentUser.stories = [];
-            currentUser.stories.push({ mediaUrl: url, type: type });
+            currentUser.stories.push({ url: url, type: isVideo ? 'video' : 'image' });
             refreshCurrentView();
-            alert('Story added! Tap your story circle to view.');
+            alert('Story added! Tap "View Your Stories" to watch.');
         };
     }
+    
+    // Direct viewer for current user's stories (always works)
+    function viewMyStories() {
+        if (!currentUser.stories || currentUser.stories.length === 0) {
+            alert("You don't have any stories yet. Tap 'Add New Story' to create one.");
+            return;
+        }
+        // Build queue only with current user's stories
+        const queue = currentUser.stories.map(story => ({
+            media: story.url,
+            type: story.type,
+            user: currentUser
+        }));
+        openStoryViewerWithQueue(queue, 0);
+    }
+    
+    // Unified viewer for any queue
+    let activeStoryQueue = [];
+    let activeStoryIndex = 0;
+    
+    function openStoryViewerWithQueue(queue, startIndex) {
+        if (!queue || queue.length === 0) return;
+        activeStoryQueue = queue;
+        activeStoryIndex = startIndex;
+        renderStoryViewer();
+    }
+    
+    function renderStoryViewer() {
+        if (activeStoryIndex >= activeStoryQueue.length) {
+            closeStoryViewer();
+            return;
+        }
+        const item = activeStoryQueue[activeStoryIndex];
+        const avatarHtml = item.user.avatarUrl ? `<img src="${item.user.avatarUrl}">` : item.user.avatar;
+        const viewerDiv = document.createElement('div');
+        viewerDiv.className = 'story-viewer';
+        viewerDiv.id = 'storyViewer';
+        const mediaElement = item.type === 'video'
+            ? `<video class="story-media-video" src="${item.media}" autoplay muted playsinline></video>`
+            : `<img class="story-media-img" src="${item.media}" alt="story">`;
+        viewerDiv.innerHTML = `
+            <div class="story-viewer-content">
+                <div class="story-header">
+                    <div class="story-header-avatar">${avatarHtml}</div>
+                    <span>${item.user.username}</span>
+                </div>
+                <div class="story-close" id="storyCloseBtn">✕</div>
+                <div class="story-nav-left" id="storyLeftZone"></div>
+                <div class="story-nav-right" id="storyRightZone"></div>
+                ${mediaElement}
+            </div>
+        `;
+        document.body.appendChild(viewerDiv);
+        
+        const videoElem = viewerDiv.querySelector('video');
+        if (videoElem) videoElem.play().catch(e => console.log("autoplay blocked"));
+        
+        document.getElementById('storyLeftZone')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (activeStoryIndex > 0) {
+                activeStoryIndex--;
+                closeStoryViewer();
+                renderStoryViewer();
+            }
+        });
+        document.getElementById('storyRightZone')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activeStoryIndex++;
+            closeStoryViewer();
+            renderStoryViewer();
+        });
+        document.getElementById('storyCloseBtn')?.addEventListener('click', () => closeStoryViewer());
+    }
+    
+    function closeStoryViewer() {
+        const el = document.getElementById('storyViewer');
+        if (el) el.remove();
+    }
+    
+    // For viewing other users' stories (build full queue but start at that user)
+    function startStoryViewer(startUser) {
+        // Build full queue (all stories from all users)
+        let fullQueue = [];
+        if (currentUser.stories && currentUser.stories.length) {
+            currentUser.stories.forEach(story => {
+                fullQueue.push({ media: story.url, type: story.type, user: currentUser });
+            });
+        }
+        for (let user of dummyUsers) {
+            if (user.stories && user.stories.length) {
+                user.stories.forEach(story => {
+                    fullQueue.push({ media: story.url, type: story.type || 'image', user: user });
+                });
+            }
+        }
+        const startIndex = fullQueue.findIndex(item => item.user.id === startUser.id);
+        if (startIndex === -1) {
+            alert('No stories available for this user');
+            return;
+        }
+        openStoryViewerWithQueue(fullQueue, startIndex);
+    }
+    
     function openUserStoryMenu() {
         const hasStories = currentUser.stories && currentUser.stories.length > 0;
         let menuHtml = `<h3>✨ Your Stories</h3><div class="story-action-menu">`;
         menuHtml += `<button class="story-menu-btn" onclick="addStoryFromPicker(); closeModal();">📸 Add New Story</button>`;
         if (hasStories) {
-            menuHtml += `<button class="story-menu-btn" onclick="closeModal(); startStoryViewer(currentUser);">👀 View Your Stories (${currentUser.stories.length})</button>`;
+            menuHtml += `<button class="story-menu-btn" onclick="closeModal(); viewMyStories();">👀 View Your Stories (${currentUser.stories.length})</button>`;
         }
         menuHtml += `<button class="story-menu-btn" onclick="closeModal()" style="background:var(--border);">Cancel</button></div>`;
         openModal(menuHtml);
     }
     
-    // DM & Chat functions (unchanged)
-    function openDM(threadId) { const thread = dmThreads.find(t => t.id === threadId); if(!thread) return; let messagesHtml = `<button class="back-to-dms" onclick="openMessagePanel()">← Back to Chats</button><div class="chat-container"><div class="chat-messages" id="chatMessages">`; thread.messages.forEach(m => { const isMe = m.senderId === currentUserId; let contentHtml = ''; if (m.rich) { const card = m.rich; const mediaTag = card.mediaUrl ? (card.originalType === 'image' ? `<img src="${card.mediaUrl}" class="dm-shared-media" loading="lazy">` : (card.originalType === 'reel' || card.originalType === 'longvideo' ? `<video src="${card.mediaUrl}" class="dm-shared-media" controls muted playsinline></video>` : '')) : ''; contentHtml = `<div class="dm-shared-card"><div style="display:flex; align-items:center; gap:6px; margin-bottom:6px"><div class="post-avatar" style="width:24px;height:24px;font-size:0.9rem">${card.authorAvatar}</div><span style="font-weight:600; font-size:0.7rem">${card.authorName}</span></div><div style="font-size:0.8rem; font-weight:500">📎 Shared</div><div style="font-size:0.8rem; margin-top:4px">${card.caption.substring(0, 100)}</div>${mediaTag}</div>`; } else { contentHtml = m.text; } messagesHtml += `<div class="message-bubble ${isMe ? 'message-right' : 'message-left'}">${contentHtml}</div>`; }); messagesHtml += `</div><div class="chat-input-area"><input type="text" id="chatInput" class="chat-input" placeholder="Send a message..." onkeydown="handleChatKeyPress(event, '${threadId}')"><button class="chat-send-btn" onclick="sendChatMessage('${threadId}')">Send</button></div></div>`; openModal(messagesHtml); setTimeout(() => { const container = document.getElementById('chatMessages'); if(container) container.scrollTop = container.scrollHeight; }, 100); }
+    // ----- ALL OTHER FUNCTIONS IDENTICAL (NO CHANGES TO LAYOUT/FEATURES) -----
+    function openDM(threadId) {
+        const thread = dmThreads.find(t => t.id === threadId);
+        if(!thread) return;
+        let messagesHtml = `<button class="back-to-dms" onclick="openMessagePanel()">← Back to Chats</button><div class="chat-container"><div class="chat-messages" id="chatMessages">`;
+        thread.messages.forEach(m => {
+            const isMe = m.senderId === currentUserId;
+            let contentHtml = '';
+            if (m.rich) {
+                const card = m.rich;
+                const mediaTag = card.mediaUrl ? (card.originalType === 'image' ? `<img src="${card.mediaUrl}" class="dm-shared-media" loading="lazy">` : (card.originalType === 'reel' || card.originalType === 'longvideo' ? `<video src="${card.mediaUrl}" class="dm-shared-media" controls muted playsinline></video>` : '')) : '';
+                contentHtml = `<div class="dm-shared-card"><div style="display:flex; align-items:center; gap:6px; margin-bottom:6px"><div class="post-avatar" style="width:24px;height:24px;font-size:0.9rem">${card.authorAvatar}</div><span style="font-weight:600; font-size:0.7rem">${card.authorName}</span></div><div style="font-size:0.8rem; font-weight:500">📎 Shared</div><div style="font-size:0.8rem; margin-top:4px">${card.caption.substring(0, 100)}</div>${mediaTag}</div>`;
+            } else {
+                contentHtml = m.text;
+            }
+            messagesHtml += `<div class="message-bubble ${isMe ? 'message-right' : 'message-left'}">${contentHtml}</div>`;
+        });
+        messagesHtml += `</div><div class="chat-input-area"><input type="text" id="chatInput" class="chat-input" placeholder="Send a message..." onkeydown="handleChatKeyPress(event, '${threadId}')"><button class="chat-send-btn" onclick="sendChatMessage('${threadId}')">Send</button></div></div>`;
+        openModal(messagesHtml);
+        setTimeout(() => { const container = document.getElementById('chatMessages'); if(container) container.scrollTop = container.scrollHeight; }, 100);
+    }
     function sendChatMessage(threadId) { const input = document.getElementById('chatInput'); if(!input?.value.trim()) return; const thread = dmThreads.find(t => t.id === threadId); if(thread){ const newMsg = { senderId: currentUserId, text: input.value.trim() }; thread.messages.push(newMsg); thread.lastMessage = newMsg.text; thread.lastSenderId = currentUserId; closeModal(); openDM(threadId); } }
     function handleChatKeyPress(event, threadId) { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(threadId); } }
     function openMessagePanel() { let dmHtml = `<h3>Direct Messages</h3><div style="margin-top:16px">`; dmThreads.forEach(thread => { const isFromMe = thread.lastSenderId === currentUserId; const prefix = isFromMe ? 'You: ' : ''; const truncatedMsg = thread.lastMessage.length > 45 ? thread.lastMessage.substring(0,42)+'...' : thread.lastMessage; dmHtml += `<div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); cursor:pointer" onclick="openDM('${thread.id}')"><div style="width:48px; height:48px; background:var(--accent-soft); border-radius:48px; display:flex; align-items:center; justify-content:center; font-size:1.6rem">${thread.avatar}</div><div style="flex:1; min-width:0"><div><b>${thread.username}</b></div><div class="msg-last-line"><span class="truncate-text">${prefix}${truncatedMsg}</span></div></div></div>`; }); dmHtml += `</div><button onclick="closeModal()" style="margin-top:20px; padding:12px; width:100%; background:var(--accent); border:none; border-radius:40px; color:white;">Close</button>`; openModal(dmHtml); }
     
-    // Profile & helper renders
-    let profileTab = 'posts';
-    function renderProfilePosts() { const myPosts = posts.filter(p => p.userId === currentUserId); const myThoughts = thoughts.filter(t => t.userId === currentUserId); let html = `<div style="display:flex; flex-direction:column; gap:12px; padding:12px">`; [...myPosts, ...myThoughts].forEach(item => { let mediaHtml = ''; if (item.mediaUrl && (item.type === 'image' || item.type === 'reel' || item.type === 'longvideo')) mediaHtml = item.type === 'image' ? `<img src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px; max-height:240px; object-fit:cover">` : `<video src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px" controls muted></video>`; const isThoughtItem = item.text !== undefined; html += `<div class="post-card-structured"><button class="delete-post-btn" onclick="deleteOwnPost(${item.id}, ${isThoughtItem})">🗑 Delete</button><div class="post-badge">📌 You posted</div><div style="display:flex; gap:10px; align-items:center"><div class="post-avatar">${currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : currentUser.avatar}</div><b>${currentUser.username}</b></div>${mediaHtml}<p style="margin-top:8px">${item.caption || item.text || ''}</p><div style="margin-top:8px; font-size:0.8rem; color:var(--accent)">❤️ ${item.likes} likes</div></div>`; }); if (myPosts.length === 0 && myThoughts.length === 0) html += `<p style="padding:20px; text-align:center">No posts yet</p>`; html += `</div>`; return html; }
-    function renderProfileReposts() { const repostedPosts = posts.filter(p => p.repostedBy.includes(currentUserId) && p.userId !== currentUserId); const repostedThoughts = thoughts.filter(t => t.repostedBy.includes(currentUserId) && t.userId !== currentUserId); let html = `<div style="display:flex; flex-direction:column; gap:12px; padding:12px">`; [...repostedPosts, ...repostedThoughts].forEach(item => { const owner = getUserById(item.userId); let mediaHtml = ''; if (item.mediaUrl && (item.type === 'image' || item.type === 'reel' || item.type === 'longvideo')) mediaHtml = item.type === 'image' ? `<img src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px; max-height:240px; object-fit:cover">` : `<video src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px" controls muted></video>`; const isThoughtItem = item.text !== undefined; html += `<div class="repost-card-structured"><button class="undo-repost-btn" onclick="undoRepost(${item.id}, ${isThoughtItem})">↩️ Undo</button><div class="repost-badge">🔁 You reposted from ${owner.username}</div><div style="display:flex; gap:10px; align-items:center"><div class="post-avatar">${owner.avatarUrl ? `<img src="${owner.avatarUrl}">` : owner.avatar}</div><b>${owner.username}</b></div>${mediaHtml}<p style="margin-top:8px">${item.caption || item.text || ''}</p><div style="margin-top:8px; font-size:0.8rem; color:var(--accent)">❤️ ${item.likes} likes</div></div>`; }); if (repostedPosts.length === 0 && repostedThoughts.length === 0) html += `<p style="padding:20px; text-align:center">No reposts yet</p>`; html += `</div>`; return html; }
-    function renderProfile() { const avatarDisplay = currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : currentUser.avatar; const profileHtml = `<div class="profile-info-card"><div class="profile-avatar-large" onclick="changeProfilePicture()">${avatarDisplay}</div><h2>${currentUser.name}</h2><p>@${currentUser.username}</p><p style="font-size:0.85rem; margin-top:4px">${currentUser.bio}</p><a href="${currentUser.link}" target="_blank" style="color:var(--accent); font-size:0.8rem">${currentUser.link}</a><div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button></div></div><div class="profile-tabs"><button class="profile-tab-btn ${profileTab === 'posts' ? 'active-tab' : ''}" onclick="setProfileTab('posts')">Posts</button><button class="profile-tab-btn ${profileTab === 'reposts' ? 'active-tab' : ''}" onclick="setProfileTab('reposts')">Reposts</button></div>${profileTab === 'posts' ? renderProfilePosts() : renderProfileReposts()}`; setMainContent(profileHtml); }
+    function renderProfilePosts() { 
+        const myPosts = posts.filter(p => p.userId === currentUserId); 
+        const myThoughts = thoughts.filter(t => t.userId === currentUserId); 
+        let html = `<div style="display:flex; flex-direction:column; gap:12px; padding:12px">`; 
+        [...myPosts, ...myThoughts].forEach(item => { 
+            let mediaHtml = ''; 
+            if (item.mediaUrl && (item.type === 'image' || item.type === 'reel' || item.type === 'longvideo')) mediaHtml = item.type === 'image' ? `<img src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px; max-height:240px; object-fit:cover">` : `<video src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px" controls muted></video>`; 
+            const isThoughtItem = item.text !== undefined;
+            html += `<div class="post-card-structured"><button class="delete-post-btn" onclick="deleteOwnPost(${item.id}, ${isThoughtItem})">🗑 Delete</button><div class="post-badge">📌 You posted</div><div style="display:flex; gap:10px; align-items:center"><div class="post-avatar">${currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : currentUser.avatar}</div><b>${currentUser.username}</b></div>${mediaHtml}<p style="margin-top:8px">${item.caption || item.text || ''}</p><div style="margin-top:8px; font-size:0.8rem; color:var(--accent)">❤️ ${item.likes} likes</div></div>`; 
+        }); 
+        if (myPosts.length === 0 && myThoughts.length === 0) html += `<p style="padding:20px; text-align:center">No posts yet</p>`; 
+        html += `</div>`; 
+        return html; 
+    }
+    function renderProfileReposts() { 
+        const repostedPosts = posts.filter(p => p.repostedBy.includes(currentUserId) && p.userId !== currentUserId); 
+        const repostedThoughts = thoughts.filter(t => t.repostedBy.includes(currentUserId) && t.userId !== currentUserId); 
+        let html = `<div style="display:flex; flex-direction:column; gap:12px; padding:12px">`; 
+        [...repostedPosts, ...repostedThoughts].forEach(item => { 
+            const owner = getUserById(item.userId); 
+            let mediaHtml = ''; 
+            if (item.mediaUrl && (item.type === 'image' || item.type === 'reel' || item.type === 'longvideo')) mediaHtml = item.type === 'image' ? `<img src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px; max-height:240px; object-fit:cover">` : `<video src="${item.mediaUrl}" style="width:100%; border-radius:16px; margin-top:8px" controls muted></video>`; 
+            const isThoughtItem = item.text !== undefined;
+            html += `<div class="repost-card-structured"><button class="undo-repost-btn" onclick="undoRepost(${item.id}, ${isThoughtItem})">↩️ Undo</button><div class="repost-badge">🔁 You reposted from ${owner.username}</div><div style="display:flex; gap:10px; align-items:center"><div class="post-avatar">${owner.avatarUrl ? `<img src="${owner.avatarUrl}">` : owner.avatar}</div><b>${owner.username}</b></div>${mediaHtml}<p style="margin-top:8px">${item.caption || item.text || ''}</p><div style="margin-top:8px; font-size:0.8rem; color:var(--accent)">❤️ ${item.likes} likes</div></div>`; 
+        }); 
+        if (repostedPosts.length === 0 && repostedThoughts.length === 0) html += `<p style="padding:20px; text-align:center">No reposts yet</p>`; 
+        html += `</div>`; 
+        return html; 
+    }
+    let profileTab = 'posts'; 
+    function renderProfile() { 
+        const avatarDisplay = currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : currentUser.avatar; 
+        const profileHtml = `<div class="profile-info-card"><div class="profile-avatar-large" onclick="changeProfilePicture()">${avatarDisplay}</div><h2>${currentUser.name}</h2><p>@${currentUser.username}</p><p style="font-size:0.85rem; margin-top:4px">${currentUser.bio}</p><a href="${currentUser.link}" target="_blank" style="color:var(--accent); font-size:0.8rem">${currentUser.link}</a><div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button></div></div><div class="profile-tabs"><button class="profile-tab-btn ${profileTab === 'posts' ? 'active-tab' : ''}" onclick="setProfileTab('posts')">Posts</button><button class="profile-tab-btn ${profileTab === 'reposts' ? 'active-tab' : ''}" onclick="setProfileTab('reposts')">Reposts</button></div>${profileTab === 'posts' ? renderProfilePosts() : renderProfileReposts()}`; 
+        setMainContent(profileHtml); 
+    }
     function changeProfilePicture() { const input = document.getElementById('avatarInput'); input.value = ''; input.click(); input.onchange = (e) => { const file = e.target.files[0]; if (!file) return; const url = URL.createObjectURL(file); currentUser.avatarUrl = url; currentUser.avatar = ''; refreshCurrentView(); alert('Profile picture updated!'); }; }
     function openEditProfile() { const modalHtml = `<h3>Edit Profile</h3><input id="editName" placeholder="Name" value="${currentUser.name}" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid var(--border); background:var(--bg);"><input id="editUsername" placeholder="Username" value="${currentUser.username}" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid var(--border); background:var(--bg);"><textarea id="editBio" placeholder="Bio" rows="2" style="width:100%; padding:12px; margin:8px 0; border-radius:20px; border:1px solid var(--border); background:var(--bg);">${currentUser.bio}</textarea><input id="editLink" placeholder="Link" value="${currentUser.link}" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid var(--border); background:var(--bg);"><div style="display:flex; gap:12px; margin-top:12px"><button onclick="saveProfileChanges()" style="flex:1; background:var(--accent); border:none; padding:12px; border-radius:40px; color:white;">Save</button><button onclick="closeModal()" style="flex:1; background:var(--border); border:none; border-radius:40px;">Cancel</button></div>`; openModal(modalHtml); }
     function saveProfileChanges() { currentUser.name = document.getElementById('editName')?.value || currentUser.name; currentUser.username = document.getElementById('editUsername')?.value || currentUser.username; currentUser.bio = document.getElementById('editBio')?.value || currentUser.bio; currentUser.link = document.getElementById('editLink')?.value || currentUser.link; closeModal(); renderProfile(); refreshCurrentView(); }
     
-    // Main renders
-    function renderHome() { let storiesHtml = `<div class="stories-vertical"><div class="story-item" onclick="openUserStoryMenu()"><div class="story-avatar">${currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : (currentUser.stories?.length ? currentUser.avatar : '+')}</div><div class="story-name">${currentUser.stories?.length ? 'Your Story' : 'Add Story'}</div></div>`; dummyUsers.forEach(u => { storiesHtml += `<div class="story-item" onclick="startStoryViewer(${JSON.stringify(u).replace(/"/g, '&quot;')})"><div class="story-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : u.avatar}</div><div class="story-name">${u.username.slice(0,8)}</div></div>`; }); storiesHtml += `</div><div class="feed-column">`; posts.forEach(p => { const owner = getUserById(p.userId); const isLiked = p.likedBy.includes(currentUserId); const repostedByMe = p.repostedBy.includes(currentUserId); let mediaTag = p.type === 'image' ? `<img class="post-media" src="${p.mediaUrl}" loading="lazy">` : `<video class="post-media" src="${p.mediaUrl}" muted loop playsinline></video>`; storiesHtml += `<div class="post-card"><div class="post-header"><div class="post-avatar">${owner.avatarUrl ? `<img src="${owner.avatarUrl}">` : owner.avatar}</div><b>${owner.username}</b></div>${repostedByMe ? '<div style="font-size:0.7rem; color:var(--accent); padding: 0 14px 4px;">🔁 You reposted</div>' : ''}${mediaTag}<div class="post-stats">❤️ ${p.likes} likes</div><div class="post-caption"><b>${owner.username}</b> ${p.caption}</div><div class="action-row"><button class="action-feed-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike(posts.find(pp=>pp.id===${p.id}), false)">❤️ ${p.likes}</button><button class="action-feed-btn" onclick="openCommentModalForItem(posts.find(pp=>pp.id===${p.id}), false)">💬 ${(p.comments||[]).length}</button><button class="action-feed-btn ${repostedByMe ? 'liked' : ''}" onclick="toggleRepost(posts.find(pp=>pp.id===${p.id}), false)">🔄 ${p.repostedBy.length}</button><button class="action-feed-btn" onclick="openShareModalById(${p.id}, false)">↗️</button></div></div>`; }); storiesHtml += `</div>`; setMainContent(`<div class="home-layout">${storiesHtml}</div>`); }
+    function renderHome() { const hasUserStories = currentUser.stories && currentUser.stories.length > 0; let storiesHtml = `<div class="stories-vertical"><div class="story-item" onclick="openUserStoryMenu()"><div class="story-avatar">${currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : (hasUserStories ? currentUser.avatar : '+')}</div><div class="story-name">${hasUserStories ? 'Your Story' : 'Add Story'}</div></div>`; dummyUsers.forEach(u => { storiesHtml += `<div class="story-item" onclick="startStoryViewer(${JSON.stringify(u).replace(/"/g, '&quot;')})"><div class="story-avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}">` : u.avatar}</div><div class="story-name">${u.username.slice(0,8)}</div></div>`; }); storiesHtml += `</div><div class="feed-column">`; posts.forEach(p => { const owner = getUserById(p.userId); const isLiked = p.likedBy.includes(currentUserId); const repostedByMe = p.repostedBy.includes(currentUserId); let mediaTag = p.type === 'image' ? `<img class="post-media" src="${p.mediaUrl}" loading="lazy">` : `<video class="post-media" src="${p.mediaUrl}" muted loop playsinline></video>`; storiesHtml += `<div class="post-card"><div class="post-header"><div class="post-avatar">${owner.avatarUrl ? `<img src="${owner.avatarUrl}">` : owner.avatar}</div><b>${owner.username}</b></div>${repostedByMe ? '<div style="font-size:0.7rem; color:var(--accent); padding: 0 14px 4px;">🔁 You reposted</div>' : ''}${mediaTag}<div class="post-stats">❤️ ${p.likes} likes</div><div class="post-caption"><b>${owner.username}</b> ${p.caption}</div><div class="action-row"><button class="action-feed-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike(posts.find(pp=>pp.id===${p.id}), false)">❤️ ${p.likes}</button><button class="action-feed-btn" onclick="openCommentModalForItem(posts.find(pp=>pp.id===${p.id}), false)">💬 ${(p.comments||[]).length}</button><button class="action-feed-btn ${repostedByMe ? 'liked' : ''}" onclick="toggleRepost(posts.find(pp=>pp.id===${p.id}), false)">🔄 ${p.repostedBy.length}</button><button class="action-feed-btn" onclick="openShareModalById(${p.id}, false)">↗️</button></div></div>`; }); storiesHtml += `</div>`; setMainContent(`<div class="home-layout">${storiesHtml}</div>`); }
     function renderThoughts() { let html = `<div style="background:var(--surface); margin:12px; border-radius:28px; padding:14px; display:flex; gap:12px;"><textarea id="newThought" placeholder="what's blooming today?" style="flex:1; background:var(--bg); border:none; border-radius:20px; padding:12px;"></textarea><button onclick="addThought()" style="background:var(--accent); border:none; border-radius:30px; padding:0 20px; color:white;">Post</button></div>`; thoughts.forEach(t => { const owner = getUserById(t.userId); const isLiked = t.likedBy.includes(currentUserId); const repostedByMe = t.repostedBy.includes(currentUserId); html += `<div class="post-card" style="padding:16px"><div><div style="display:flex; gap:10px;"><div class="post-avatar">${owner.avatarUrl ? `<img src="${owner.avatarUrl}">` : owner.avatar}</div><div><b>${owner.username}</b><p style="margin-top:6px">${t.text}</p><div style="display:flex; gap:20px; margin-top:12px"><button class="action-feed-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike(thoughts.find(th=>th.id===${t.id}), true)">❤️ ${t.likes}</button><button class="action-feed-btn" onclick="openCommentModalForItem(thoughts.find(th=>th.id===${t.id}), true)">💬 ${(t.comments||[]).length}</button><button class="action-feed-btn ${repostedByMe ? 'liked' : ''}" onclick="toggleRepost(thoughts.find(th=>th.id===${t.id}), true)">🔄 ${t.repostedBy.length}</button><button class="action-feed-btn" onclick="openShareModalById(${t.id}, true)">↗️</button></div></div></div></div></div>`; }); setMainContent(html); }
     let showReelsMode = true; function renderVideosTab() { if (showReelsMode) { const reelsList = posts.filter(p => p.type === 'reel'); let reelsHtml = `<div class="switch-bar"><span>🎥 Reels</span><button class="back-btn" onclick="toggleReelsMode(false)">📺 Long videos →</button></div><div class="reels-container" id="reelsContainer">`; reelsList.forEach(reel => { const owner = getUserById(reel.userId); const isLiked = reel.likedBy.includes(currentUserId); reelsHtml += `<div class="reel-item"><video class="reel-video" src="${reel.mediaUrl}" loop playsinline></video><div class="reel-overlay"><b>${owner.username}</b><br>${reel.caption}</div><div class="reel-actions"><button class="reel-action-btn" onclick="toggleLike(posts.find(p=>p.id===${reel.id}), false)">${isLiked ? '❤️' : '🤍'}<span>${reel.likes}</span></button><button class="reel-action-btn" onclick="openCommentModalForItem(posts.find(p=>p.id===${reel.id}), false)">💬<span>${(reel.comments||[]).length}</span></button><button class="reel-action-btn" onclick="toggleRepost(posts.find(p=>p.id===${reel.id}), false)">🔄<span>${reel.repostedBy.length}</span></button><button class="reel-action-btn" onclick="openShareModalById(${reel.id}, false)">↗️</button></div></div>`; }); reelsHtml += `</div>`; setMainContent(reelsHtml); setTimeout(() => { document.querySelectorAll('.reel-video').forEach(v => { v.muted = false; v.volume = 1; const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) e.target.play().catch(()=>{}); else e.target.pause(); }); }, { threshold: 0.5 }); obs.observe(v); }); }, 100); } else { const longVideos = posts.filter(p => p.type === 'longvideo'); let listHtml = `<div class="switch-bar"><button class="back-btn" onclick="toggleReelsMode(true)">← Back to Reels</button><span>🎬 Library</span></div><div class="video-list">`; longVideos.forEach(v => { listHtml += `<div class="video-card" onclick="openLongVideoPlayer('${v.mediaUrl}','${v.longTitle || v.caption}')"><img class="video-thumb" src="https://picsum.photos/id/${v.id%100}/200/200"><div><b>${v.longTitle || v.caption}</b><br><small>${getUserById(v.userId).username} · ❤️ ${v.likes}</small><br><span style="background:var(--accent-soft); padding:2px 10px; border-radius:20px;">${v.duration || '10:00'}</span></div></div>`; }); listHtml += `</div>`; setMainContent(listHtml); } }
     function toggleReelsMode(toReels) { showReelsMode = toReels; renderVideosTab(); }
@@ -985,9 +1157,10 @@
     
     window.openUserStoryMenu = openUserStoryMenu;
     window.addStoryFromPicker = addStoryFromPicker;
+    window.viewMyStories = viewMyStories;
+    window.startStoryViewer = startStoryViewer;
     window.sharePendingToUser = sharePendingToUser;
     window.openShareModalById = openShareModalById;
-    window.startStoryViewer = startStoryViewer;
     window.toggleLike = toggleLike;
     window.toggleRepost = toggleRepost;
     window.openCommentModalForItem = openCommentModalForItem;
