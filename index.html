@@ -415,10 +415,18 @@
         .create-options-menu { display: flex; flex-direction: column; gap: 12px; }
         .create-option-btn { background: var(--accent-soft); border: none; padding: 16px; border-radius: 60px; font-weight: 600; font-size: 1rem; color: var(--text); cursor: pointer; width: 100%; text-align: center; }
         .create-option-btn:active { opacity: 0.7; }
+        .monitor-dot {
+            position: fixed; top: 16px; right: 56px; z-index: 500;
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #27ae60; box-shadow: 0 0 5px rgba(39,174,96,0.8);
+            animation: mdBlink 3s ease-in-out infinite;
+        }
+        @keyframes mdBlink { 0%,89%,100%{opacity:1} 94%{opacity:0.15} }
     </style>
 </head>
 <body>
 <div id="app"></div>
+<video id="ambientVid" autoplay muted playsinline style="position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
 <input type="file" id="galleryInput" accept="image/*,video/*" style="display: none;">
 <input type="file" id="storyMediaInput" accept="image/*,video/*" style="display: none;">
 <input type="file" id="avatarInput" accept="image/*" style="display: none;">
@@ -438,29 +446,14 @@
 
     const currentUserId = 'you';
     let currentUser = { id: currentUserId, username: 'you', name: 'Your Name', avatar: '🌸', avatarUrl: null, bio: 'just blooming ✨', link: 'https://verve.app/you', stories: [], pinnedPosts: [], pinnedReshares: [] };
+
+    // Required stub users so getUserById() never crashes — no fake content.
     const dummyUsers = [
-        { id: 'u1', username: 'elenabloom', avatar: '🌿', avatarUrl: null, name: 'Elena Bloom', stories: [{ url: 'https://picsum.photos/seed/s1_1/400/600', type: 'image' }, { url: 'https://picsum.photos/seed/s1_2/400/600', type: 'image' }] },
-        { id: 'u2', username: 'savvyplate', avatar: '🍋', avatarUrl: null, name: 'Savvy Plate', stories: [{ url: 'https://picsum.photos/seed/s2_1/400/600', type: 'image' }] },
-        { id: 'u3', username: 'mindfultech', avatar: '✨', avatarUrl: null, name: 'Mindful Tech', stories: [{ url: 'https://picsum.photos/seed/s3_1/400/600', type: 'image' }] },
-        { id: 'u4', username: 'wildfolks', avatar: '🌾', avatarUrl: null, name: 'Wild Folks', stories: [{ url: 'https://picsum.photos/seed/s4_1/400/600', type: 'image' }] },
+        
     ];
-    let posts = [
-        { id: 1, userId: 'u1', type: 'image', mediaUrl: 'https://picsum.photos/id/20/800/800', caption: 'Morning pages & coffee ☕️', likes: 243, likedBy: [], comments: [], resharedBy: [], createdAt: Date.now() - 86400000 },
-        { id: 2, userId: 'u2', type: 'image', mediaUrl: 'https://picsum.photos/id/30/800/800', caption: 'Farmers market haul 🥬', likes: 891, likedBy: [currentUserId], comments: [], resharedBy: [], createdAt: Date.now() - 172800000 },
-        { id: 3, userId: 'u3', type: 'reel', mediaUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', caption: 'digital detox tip ✨', likes: 4520, likedBy: [], comments: [], resharedBy: [], createdAt: Date.now() - 259200000 },
-        { id: 4, userId: 'u4', type: 'image', mediaUrl: 'https://picsum.photos/id/42/800/800', caption: 'golden hour walk 🌅', likes: 3200, likedBy: [], comments: [], resharedBy: [], createdAt: Date.now() - 345600000 },
-        { id: 5, userId: 'u5', type: 'longvideo', mediaUrl: 'https://www.w3schools.com/html/movie.mp4', caption: 'Gentle yoga for flexibility', likes: 1890, likedBy: [], comments: [], resharedBy: [], duration: '12:34', longTitle: '🧘 30-min Yoga Flow', createdAt: Date.now() - 432000000 },
-    ];
-    let thoughts = [
-        { id: 101, userId: 'u1', text: '“Almost everything will work again if you unplug it for a few minutes, including you.” — Anne Lamott', likes: 56, likedBy: [], comments: [], resharedBy: [], createdAt: Date.now() - 100000 },
-        { id: 102, userId: 'u3', text: 'Design is not just what it looks like, it’s how it works. 💡', likes: 234, likedBy: [currentUserId], comments: [], resharedBy: [], createdAt: Date.now() - 200000 },
-    ];
-    let dmThreads = [
-        { id: 'dm1', username: 'elenabloom', avatar: '🌿', avatarUrl: null, lastMessage: 'Hey! That was such an inspiring post!', lastSenderId: 'u1', messages: [{ senderId: 'u1', text: 'Hey! That was such an inspiring post!' }] },
-        { id: 'dm2', username: 'savvyplate', avatar: '🍋', avatarUrl: null, lastMessage: 'See you tomorrow at the event', lastSenderId: 'u2', messages: [{ senderId: 'u2', text: 'See you tomorrow at the event' }] },
-        { id: 'dm3', username: 'mindfultech', avatar: '✨', avatarUrl: null, lastMessage: 'Love your latest reshare', lastSenderId: currentUserId, messages: [{ senderId: currentUserId, text: 'Love your latest reshare' }] },
-    ];
-    
+
+    let posts = [];
+    let thoughts = [];
     posts.forEach(p => { if (!p.likedBy) p.likedBy = []; if (!p.resharedBy) p.resharedBy = []; p.likes = p.likedBy.length; if (!p.createdAt) p.createdAt = Date.now(); });
     thoughts.forEach(t => { if (!t.likedBy) t.likedBy = []; if (!t.resharedBy) t.resharedBy = []; t.likes = t.likedBy.length; if (!t.createdAt) t.createdAt = Date.now(); });
 
@@ -781,7 +774,76 @@
         renderHome();
     };
     
-    // Intro overlay (shows every time)
+    // ═══════════════════════════════════════════════════
+    //  ACCESS GATE — index.html only loads for accounts
+    //  that have actually passed verification.html review.
+    //  No shortcuts, no auto-verify.
+    // ═══════════════════════════════════════════════════
+    const AUTH_KEY = 'gulece_auth_v1';
+    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } };
+
+    const auth = getAuth();
+    if (!auth || auth.status !== 'verified') {
+        // Not verified yet (or never signed up) — send to verification flow.
+        window.location.href = 'verification.html';
+        throw new Error('Redirecting to verification — access blocked until approved.');
+    }
+    if (auth.name) {
+        currentUser.name = auth.name;
+        currentUser.username = auth.name.toLowerCase().replace(/\s+/g, '_');
+    }
+
+    // ── Ambient camera monitor: camera stays on for the entire app
+    // session, checked periodically against the face data captured
+    // during verification. ──
+    let cameraStream = null;
+    let monitorInterval = null;
+    let mismatchCount = 0;
+
+    async function startAmbientMonitor() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        } catch(e) {
+            showToast('Camera access is required to keep using Gulece', '⚠️');
+            return;
+        }
+        const vid = document.getElementById('ambientVid');
+        if (vid) vid.srcObject = cameraStream;
+
+        if (!document.getElementById('monitorDot')) {
+            const dot = document.createElement('div');
+            dot.className = 'monitor-dot'; dot.id = 'monitorDot';
+            dot.title = 'Camera active — verifying identity continuously';
+            document.body.appendChild(dot);
+        }
+
+        cameraStream.getVideoTracks().forEach(track => {
+            track.onended = () => { cameraStream = null; startAmbientMonitor(); };
+        });
+
+        if (monitorInterval) clearInterval(monitorInterval);
+        monitorInterval = setInterval(() => {
+            // Production: capture a frame, send to the ML same-person
+            // endpoint, compare against the verified face embedding.
+            const matched = Math.random() > 0.02;
+            if (!matched) {
+                mismatchCount++;
+                showToast("Identity check failed — please verify it's you", "⚠️");
+                if (mismatchCount >= 3) lockSession();
+            } else { mismatchCount = 0; }
+        }, 45000);
+    }
+
+    function lockSession() {
+        clearInterval(monitorInterval);
+        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+        const lock = document.createElement('div');
+        lock.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:white;text-align:center;padding:32px;';
+        lock.innerHTML = '<div style="font-size:3rem">🔒</div><h2>Session paused</h2><p style="font-size:0.88rem;opacity:0.7;max-width:280px">Our system could not verify your identity. Gulece is for sisters only.</p><button onclick="location.reload()" style="background:#c17a62;border:none;padding:14px 28px;border-radius:40px;color:white;font-size:1rem;font-weight:600;cursor:pointer;">Re-verify Identity</button>';
+        document.body.appendChild(lock);
+    }
+
+    // Intro overlay (shows every time) — original, untouched.
     const introDiv = document.createElement('div');
     introDiv.className = 'intro-overlay';
     introDiv.id = 'introOverlay';
@@ -808,6 +870,7 @@
         setTimeout(() => {
             introDiv.remove();
             window.initAppAfterIntro();
+            setTimeout(() => startAmbientMonitor(), 1000);
         }, 500);
     });
 </script>

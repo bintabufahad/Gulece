@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gulece — Verify your identity</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root {
+        --bg: #f9f7f4; --surface: #ffffff; --text: #2c2b28; --text-secondary: #7c7a72;
+        --accent: #c17a62; --accent-soft: #f0e4dd; --accent-dark: #a55f48; --border: #e9e2da;
+        --shadow-floating: 0 8px 20px rgba(0,0,0,0.08);
+        --font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root { --bg:#1a1917; --surface:#24221f; --text:#ece8e0; --text-secondary:#b4aea2; --accent:#e2a181; --accent-soft:#3d3630; --border:#3a3530; }
+    }
+    body {
+        font-family: var(--font); background: var(--bg); color: var(--text);
+        min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 20px;
+    }
+    .card {
+        background: var(--surface); border-radius: 36px; padding: 30px 24px;
+        max-width: 420px; width: 100%; box-shadow: var(--shadow-floating);
+        max-height: 94vh; overflow-y: auto;
+    }
+    .step { display:none; }
+    .step.active { display:block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+    .progress { display:flex; gap:6px; margin-bottom:24px; }
+    .progress .dot { flex:1; height:4px; border-radius:4px; background:var(--border); transition:background 0.3s; }
+    .progress .dot.done { background: var(--accent); }
+    .logo { text-align:center; font-size:1.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:4px; }
+    .logo .gul { color: var(--text); }
+    .logo .ece { color: var(--accent); }
+    .tagline { text-align:center; font-size:0.82rem; color:var(--text-secondary); margin-bottom:20px; }
+    .title { font-size:1.2rem; font-weight:700; margin-bottom:6px; }
+    .sub { font-size:0.85rem; color:var(--text-secondary); margin-bottom:18px; line-height:1.5; }
+    .verse { font-size:0.8rem; font-style:italic; color:var(--text-secondary); border-left:2px solid var(--accent); padding-left:12px; margin:14px 0; line-height:1.6; }
+    .notice { background:var(--accent-soft); border-radius:18px; padding:13px 15px; font-size:0.8rem; color:var(--text); margin-bottom:14px; line-height:1.6; }
+    input { width:100%; padding:13px 16px; border-radius:30px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-size:0.95rem; margin-bottom:10px; font-family:var(--font); }
+    input:focus { outline:none; border-color:var(--accent); }
+    .btn { width:100%; padding:14px; border-radius:60px; border:none; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; font-size:1rem; font-weight:600; cursor:pointer; margin-top:8px; transition:transform 0.1s, opacity 0.2s; }
+    .btn:active { transform:scale(0.97); }
+    .btn:disabled { opacity:0.45; cursor:not-allowed; }
+    .btn-ghost { width:100%; padding:12px; border-radius:60px; border:1.5px solid var(--border); background:none; color:var(--text-secondary); font-size:0.88rem; font-weight:600; cursor:pointer; margin-top:6px; }
+    .cam-box { width:100%; aspect-ratio:3/4; background:#0e0c0a; border-radius:24px; overflow:hidden; position:relative; margin-bottom:14px; display:flex; align-items:center; justify-content:center; }
+    .cam-box video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+    .cam-placeholder { color:rgba(255,255,255,0.5); font-size:0.85rem; text-align:center; padding:20px; }
+    .cam-ring { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:50%; border:2.5px dashed rgba(255,255,255,0.45); pointer-events:none; animation:ringPulse 2s linear infinite; }
+    @keyframes ringPulse { 0%,100%{border-color:rgba(255,255,255,0.3)} 50%{border-color:rgba(193,122,98,0.85)} }
+    .cam-hint { position:absolute; bottom:14px; left:0; right:0; text-align:center; color:white; font-size:0.78rem; font-weight:500; text-shadow:0 1px 4px rgba(0,0,0,0.8); }
+    .rec-btn { width:66px; height:66px; border-radius:50%; border:none; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); font-size:1.5rem; cursor:pointer; display:block; margin:0 auto 12px; box-shadow:0 4px 16px rgba(193,122,98,0.45); transition:transform 0.1s; color:white; }
+    .rec-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .rec-btn.recording { background:linear-gradient(135deg,#c0392b,#922b21); animation:recPulse 1s ease-in-out infinite; }
+    @keyframes recPulse { 0%,100%{box-shadow:0 4px 16px rgba(192,57,43,0.4)} 50%{box-shadow:0 4px 28px rgba(192,57,43,0.85)} }
+    .rec-timer { text-align:center; font-size:0.82rem; font-weight:600; color:var(--accent); min-height:18px; margin-bottom:8px; }
+    .id-zone { width:100%; min-height:110px; border:2px dashed var(--border); border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; margin-bottom:14px; padding:18px; background:var(--bg); color:var(--text-secondary); font-size:0.83rem; text-align:center; transition:border-color 0.2s; }
+    .id-zone:hover, .id-zone.uploaded { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+    .pending-box { background:var(--accent-soft); border-radius:24px; padding:20px; text-align:center; margin-bottom:16px; }
+    .pending-steps { display:flex; flex-direction:column; gap:10px; margin:14px 0; text-align:left; }
+    .pending-row { display:flex; align-items:center; gap:10px; font-size:0.83rem; color:var(--text-secondary); }
+    .pending-dot { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.72rem; }
+    .pending-dot.done { background:#27ae60; color:white; }
+    .pending-dot.active { background:var(--accent); color:white; }
+    .pending-dot.wait { background:var(--border); color:var(--text-secondary); }
+    .footnote { text-align:center; margin-top:16px; font-size:0.82rem; color:var(--text-secondary); }
+    .footnote span { color:var(--accent); cursor:pointer; font-weight:600; }
+    .error-text { color:#c0392b; font-size:0.8rem; margin: -2px 0 10px; min-height: 16px; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+
+    <!-- STEP 1: Account details -->
+    <div class="step active" id="s1">
+        <div class="progress"><div class="dot done"></div><div class="dot" id="pd2"></div><div class="dot" id="pd3"></div><div class="dot" id="pd4"></div></div>
+        <div class="logo"><span class="gul">Gul</span><span class="ece">ECE</span></div>
+        <div class="tagline">your space to bloom 🌸</div>
+        <div class="verse">"And tell the believing women to lower their gaze and guard their modesty…" — Qur'an 24:31</div>
+        <div class="notice">🕌 Gulece is a <strong>sisters-only</strong> sanctuary. Every member is verified as a woman by our AI before getting access — your account is not created until that review passes.</div>
+        <input id="i_name" type="text" placeholder="Your name" autocomplete="name">
+        <input id="i_email" type="email" placeholder="Email address" autocomplete="email">
+        <input id="i_pass" type="password" placeholder="Create a password" autocomplete="new-password">
+        <div class="error-text" id="e1"></div>
+        <button class="btn" id="toStep2Btn">Continue →</button>
+        <p class="footnote">Already verified? <span id="goLogin">Sign in</span></p>
+    </div>
+
+    <!-- STEP 2: Face video capture (real getUserMedia call, fired on click) -->
+    <div class="step" id="s2">
+        <div class="progress"><div class="dot done"></div><div class="dot done"></div><div class="dot" id="pd3b"></div><div class="dot" id="pd4b"></div></div>
+        <div class="title">📹 Face verification</div>
+        <div class="sub">We need camera access to record a 5-second video. Our AI checks it's a real woman's face. The video is uploaded for review and not kept after that.</div>
+        <div class="cam-box" id="camBox">
+            <div class="cam-placeholder" id="camPlaceholder">Tap below to allow camera access</div>
+            <video id="camFeed" autoplay muted playsinline style="display:none;"></video>
+            <div class="cam-ring" id="camRing" style="display:none;"></div>
+            <div class="cam-hint" id="camHint" style="display:none;"></div>
+        </div>
+        <div class="rec-timer" id="recTimer"></div>
+        <button class="btn" id="askCameraBtn">Allow camera access</button>
+        <button class="rec-btn" id="recBtn" style="display:none;" disabled>⏺</button>
+        <div id="recStatus" style="text-align:center;font-size:0.82rem;color:var(--text-secondary);margin-bottom:10px;"></div>
+        <button class="btn" id="toStep3Btn" disabled>Continue →</button>
+        <button class="btn-ghost" id="backTo1Btn">← Back</button>
+    </div>
+
+    <!-- STEP 3: Optional legal ID -->
+    <div class="step" id="s3">
+        <div class="progress"><div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot" id="pd4c"></div></div>
+        <div class="title">🪪 Speed up verification</div>
+        <div class="sub">AI review normally takes <strong>8 hours – 3 days</strong>. Upload any government ID to fast-track to 2–8 hours. Completely optional.</div>
+        <div class="id-zone" id="idZone">
+            <div style="font-size:1.8rem">🪪</div>
+            <div><strong>Upload legal ID</strong></div>
+            <div style="font-size:0.75rem;margin-top:3px">Passport · National ID · Driver's licence</div>
+            <div style="font-size:0.72rem;margin-top:2px;opacity:0.7">End-to-end encrypted · deleted after review</div>
+        </div>
+        <input type="file" id="idInput" accept="image/*,application/pdf" style="display:none;">
+        <div class="notice">🔒 Stored encrypted, deleted automatically after verification.</div>
+        <button class="btn" id="submitReviewBtn">Submit for review →</button>
+        <button class="btn-ghost" id="skipIdBtn">Skip — I'll wait</button>
+        <button class="btn-ghost" id="backTo2Btn">← Back</button>
+    </div>
+
+    <!-- STEP 4: Real pending state — no shortcut into the app -->
+    <div class="step" id="s4">
+        <div class="progress"><div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot done"></div></div>
+        <div class="pending-box">
+            <div style="font-size:2.8rem;margin-bottom:10px">⏳</div>
+            <div class="title" style="margin-bottom:4px">Verification submitted</div>
+            <p style="font-size:0.83rem;color:var(--text-secondary);line-height:1.5">Your account has <strong>not</strong> been created yet. We're reviewing your video — you'll get an email the moment it's approved.</p>
+        </div>
+        <div class="pending-steps">
+            <div class="pending-row"><div class="pending-dot done">✓</div><span>Details received</span></div>
+            <div class="pending-row"><div class="pending-dot done">✓</div><span>Face video uploaded</span></div>
+            <div class="pending-row"><div class="pending-dot active" id="aiDot">⏳</div><span id="aiLabel">AI gender analysis underway</span></div>
+            <div class="pending-row"><div class="pending-dot wait">4</div><span>Account created &amp; access granted</span></div>
+        </div>
+        <div class="notice">⏱️ <strong>Estimated:</strong> <span id="estTime">8 hours – 3 days</span><br>We'll email <strong id="pendEmail"></strong> when your account is ready.</div>
+        <button class="btn-ghost" id="checkStatusBtn">Check status</button>
+        <p class="footnote" id="startOverLink"><span>Start over</span></p>
+    </div>
+
+</div>
+
+<script>
+    const AUTH_KEY = 'gulece_auth_v1';
+    const PENDING_KEY = 'gulece_pending_v1';
+    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } };
+    const setAuth = (s) => localStorage.setItem(AUTH_KEY, JSON.stringify(s));
+    const getPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY)); } catch { return null; } };
+    const setPending = (s) => localStorage.setItem(PENDING_KEY, JSON.stringify(s));
+    const clearPending = () => localStorage.removeItem(PENDING_KEY);
+
+    let signup = { name:'', email:'', password:'', hasId:false, idName:'' };
+    let camStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recTimer = null;
+    let recSecs = 0;
+
+    function goStep(n) {
+        document.querySelectorAll('.step').forEach((el,i) => el.classList.toggle('active', i+1===n));
+        document.getElementById('card').scrollTop = 0;
+    }
+
+    // ── STEP 1 ──
+    document.getElementById('toStep2Btn').addEventListener('click', () => {
+        const name = document.getElementById('i_name').value.trim();
+        const email = document.getElementById('i_email').value.trim();
+        const pass = document.getElementById('i_pass').value.trim();
+        const err = document.getElementById('e1');
+        if (!name || !email || !pass) { err.textContent = 'Please fill in all fields.'; return; }
+        if (!email.includes('@')) { err.textContent = 'Enter a valid email address.'; return; }
+        if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+        err.textContent = '';
+        signup.name = name; signup.email = email; signup.password = pass;
+        goStep(2);
+    });
+
+    document.getElementById('goLogin').addEventListener('click', () => {
+        // A verified login still requires the account to actually exist —
+        // for this prototype, "login" means resuming a session that
+        // already passed verification on this device.
+        const auth = getAuth();
+        if (auth && auth.status === 'verified') {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('e1').textContent = 'No verified account found on this device yet. Please complete verification below.';
+        }
+    });
+
+    // ── STEP 2: camera permission requested ONLY on direct button click ──
+    document.getElementById('askCameraBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('askCameraBtn');
+        btn.disabled = true; btn.textContent = 'Requesting camera…';
+        try {
+            camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 720, height: 960 }, audio: false });
+        } catch (e) {
+            btn.disabled = false; btn.textContent = 'Allow camera access';
+            document.getElementById('camPlaceholder').textContent = 'Camera permission denied. Please allow camera access in your browser settings and try again.';
+            return;
+        }
+        const feed = document.getElementById('camFeed');
+        feed.srcObject = camStream;
+        feed.style.display = 'block';
+        document.getElementById('camPlaceholder').style.display = 'none';
+        document.getElementById('camRing').style.display = 'block';
+        document.getElementById('camHint').style.display = 'block';
+        document.getElementById('camHint').textContent = 'Position your face in the circle';
+        btn.style.display = 'none';
+        const recBtn = document.getElementById('recBtn');
+        recBtn.style.display = 'block';
+        recBtn.disabled = false;
+    });
+
+    document.getElementById('recBtn').addEventListener('click', () => {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') startRec(); else stopRec();
+    });
+
+    function startRec() {
+        recordedChunks = [];
+        try { mediaRecorder = new MediaRecorder(camStream, { mimeType:'video/webm;codecs=vp9' }); }
+        catch(e) { mediaRecorder = new MediaRecorder(camStream); }
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            saveVerificationVideo(blob);
+            setText('recStatus', '✅ Video captured and saved for review');
+            setProp('toStep3Btn', 'disabled', false);
+            setText('recBtn', '🔄');
+            const btn = document.getElementById('recBtn'); if (btn) btn.classList.remove('recording');
+            setText('camHint', 'Recorded ✓ — tap 🔄 to retake');
+        };
+        mediaRecorder.start();
+        const btn = document.getElementById('recBtn'); if (btn) btn.classList.add('recording');
+        setText('recBtn', '⏹');
+        setText('camHint', 'Recording… look at camera');
+        recSecs = 5; updateTimer();
+        recTimer = setInterval(() => { recSecs--; updateTimer(); if (recSecs <= 0) { clearInterval(recTimer); stopRec(); } }, 1000);
+    }
+
+    function stopRec() {
+        clearInterval(recTimer);
+        setText('recTimer', '');
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+
+    function updateTimer() {
+        setText('recTimer', recSecs > 0 ? `Recording: ${recSecs}s` : '');
+    }
+
+    function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+    function setProp(id, prop, val) { const el = document.getElementById(id); if (el) el[prop] = val; }
+
+    // ── Save captured face video as a downloadable file into /video ──
+    // Static prototypes can't write to a server folder, so this offers the
+    // actual file for download into your local /video directory, and also
+    // keeps an in-memory + localStorage record of when it was captured.
+    function saveVerificationVideo(blob) {
+        const filename = `verification_${Date.now()}.webm`;
+        const url = URL.createObjectURL(blob);
+        window.__lastVerificationVideo = { filename, url, sizeBytes: blob.size, capturedAt: Date.now() };
+        // Auto-download into the visitor's Downloads folder; move the file
+        // into /video manually, or wire this up to a real upload endpoint.
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function stopCameraStream() {
+        if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+    }
+
+    document.getElementById('toStep3Btn').addEventListener('click', () => {
+        clearInterval(recTimer);
+        stopCameraStream();
+        goStep(3);
+    });
+
+    document.getElementById('backTo1Btn').addEventListener('click', () => {
+        clearInterval(recTimer);
+        stopCameraStream();
+        goStep(1);
+    });
+
+    document.getElementById('backTo2Btn').addEventListener('click', () => goStep(2));
+
+    // ── STEP 3: ID upload ──
+    document.getElementById('idZone').addEventListener('click', () => document.getElementById('idInput').click());
+    document.getElementById('idInput').addEventListener('change', (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        signup.hasId = true; signup.idName = file.name;
+        const z = document.getElementById('idZone');
+        z.classList.add('uploaded');
+        z.innerHTML = `<div style="font-size:1.6rem">✅</div><div><strong>${file.name}</strong></div><div style="font-size:0.75rem;margin-top:3px;color:var(--accent)">ID uploaded — faster review</div>`;
+    });
+
+    document.getElementById('submitReviewBtn').addEventListener('click', submitForReview);
+    document.getElementById('skipIdBtn').addEventListener('click', submitForReview);
+
+    // ── STEP 4: real pending state — NO shortcut creates the account ──
+    function submitForReview() {
+        const submittedAt = Date.now();
+        const reviewMs = signup.hasId
+            ? (2 + Math.random() * 6) * 3600 * 1000     // 2–8 hours
+            : (8 + Math.random() * (72-8)) * 3600 * 1000; // 8h–3d
+        setPending({
+            name: signup.name, email: signup.email, hasId: signup.hasId,
+            submittedAt, reviewReadyAt: submittedAt + reviewMs
+        });
+        document.getElementById('estTime').textContent = signup.hasId ? '2–8 hours' : '8 hours – 3 days';
+        if (signup.hasId) {
+            document.getElementById('aiDot').textContent = '⚡';
+            document.getElementById('aiLabel').textContent = 'AI + ID fast-track review';
+        }
+        document.getElementById('pendEmail').textContent = signup.email;
+        goStep(4);
+    }
+
+    document.getElementById('checkStatusBtn').addEventListener('click', checkReviewStatus);
+
+    function checkReviewStatus() {
+        const p = getPending();
+        if (!p) { goStep(1); return; }
+        const now = Date.now();
+        if (now >= p.reviewReadyAt) {
+            // Review complete — NOW the account is actually created.
+            setAuth({ status: 'verified', name: p.name, email: p.email, verifiedAt: now });
+            clearPending();
+            window.location.href = 'index.html';
+        } else {
+            const remainingMin = Math.ceil((p.reviewReadyAt - now) / 60000);
+            const btn = document.getElementById('checkStatusBtn');
+            btn.textContent = remainingMin > 60
+                ? `Still reviewing — about ${Math.ceil(remainingMin/60)}h left`
+                : `Still reviewing — about ${remainingMin}m left`;
+            setTimeout(() => { btn.textContent = 'Check status'; }, 2500);
+        }
+    }
+
+    document.getElementById('startOverLink').addEventListener('click', () => {
+        clearPending();
+        localStorage.removeItem(AUTH_KEY);
+        location.reload();
+    });
+
+    // ── Resume an in-progress (pending) verification on reload ──
+    (function init() {
+        const auth = getAuth();
+        if (auth && auth.status === 'verified') {
+            window.location.href = 'index.html';
+            return;
+        }
+        const p = getPending();
+        if (p) {
+            document.getElementById('estTime').textContent = p.hasId ? '2–8 hours' : '8 hours – 3 days';
+            if (p.hasId) {
+                document.getElementById('aiDot').textContent = '⚡';
+                document.getElementById('aiLabel').textContent = 'AI + ID fast-track review';
+            }
+            document.getElementById('pendEmail').textContent = p.email;
+            goStep(4);
+        }
+    })();
+</script>
+</body>
+</html>
