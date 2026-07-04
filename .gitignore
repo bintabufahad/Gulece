@@ -1,0 +1,4 @@
+node_modules/
+
+# Real secrets — Supabase service role key, admin password. Never commit this.
+.env

@@ -665,7 +665,7 @@
     }
     function renderProfile() { 
         const avatarDisplay = currentUser.avatarUrl ? `<img src="${currentUser.avatarUrl}">` : currentUser.avatar; 
-        const profileHtml = `<div class="profile-info-card"><div class="profile-avatar-large" onclick="changeProfilePicture()">${avatarDisplay}</div><h2>${currentUser.name}</h2><p>@${currentUser.username}</p><p style="font-size:0.85rem; margin-top:4px">${currentUser.bio}</p><a href="${currentUser.link}" target="_blank" style="color:var(--accent); font-size:0.8rem">${currentUser.link}</a><div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button></div></div><div class="profile-tabs"><button class="profile-tab-btn ${profileTab === 'posts' ? 'active-tab' : ''}" onclick="setProfileTab('posts')">Posts</button><button class="profile-tab-btn ${profileTab === 'reshares' ? 'active-tab' : ''}" onclick="setProfileTab('reshares')">Reshares</button></div>${profileTab === 'posts' ? renderProfilePosts() : renderProfileReshares()}`; 
+        const profileHtml = `<div class="profile-info-card"><div class="profile-avatar-large" onclick="changeProfilePicture()">${avatarDisplay}</div><h2>${currentUser.name}</h2><p>@${currentUser.username}</p><p style="font-size:0.85rem; margin-top:4px">${currentUser.bio}</p><a href="${currentUser.link}" target="_blank" style="color:var(--accent); font-size:0.8rem">${currentUser.link}</a><div><button class="edit-profile-btn" onclick="openEditProfile()">Edit Profile</button> <button class="edit-profile-btn" onclick="signOut()">Sign out</button></div></div><div class="profile-tabs"><button class="profile-tab-btn ${profileTab === 'posts' ? 'active-tab' : ''}" onclick="setProfileTab('posts')">Posts</button><button class="profile-tab-btn ${profileTab === 'reshares' ? 'active-tab' : ''}" onclick="setProfileTab('reshares')">Reshares</button></div>${profileTab === 'posts' ? renderProfilePosts() : renderProfileReshares()}`; 
         setMainContent(profileHtml); 
     }
     function changeProfilePicture() { const input = document.getElementById('avatarInput'); input.value = ''; input.click(); input.onchange = (e) => { const file = e.target.files[0]; if (!file) return; const url = URL.createObjectURL(file); currentUser.avatarUrl = url; currentUser.avatar = ''; refreshCurrentView(); showToast("Profile picture updated", "🖼️"); }; }
@@ -775,104 +775,86 @@
     };
     
     // ═══════════════════════════════════════════════════
-    //  ACCESS GATE — index.html only loads for accounts
-    //  that have actually passed verification.html review.
-    //  No shortcuts, no auto-verify.
+    //  ACCESS GATE — index.html only loads for accounts that have a
+    //  real, server-verified session. The server is the source of
+    //  truth (not localStorage), and access is only granted once a
+    //  human reviewer has approved the account in /admin.html.
     // ═══════════════════════════════════════════════════
-    const AUTH_KEY = 'gulece_auth_v1';
-    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } };
+    async function checkSession() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return null;
+            return await res.json();
+        } catch (e) { return null; }
+    }
 
-    const auth = getAuth();
-    if (!auth || auth.status !== 'verified') {
-        // Not verified yet (or never signed up) — send to verification flow.
+    async function signOut() {
+        try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
         window.location.href = 'verification.html';
-        throw new Error('Redirecting to verification — access blocked until approved.');
-    }
-    if (auth.name) {
-        currentUser.name = auth.name;
-        currentUser.username = auth.name.toLowerCase().replace(/\s+/g, '_');
     }
 
-    // ── Ambient camera monitor: camera stays on for the entire app
-    // session, checked periodically against the face data captured
-    // during verification. ──
+    // ── Ambient camera indicator: camera stays visibly on while using the
+    // app, as a transparency signal that this is a verified space — but it
+    // does NOT run any identity check. There is no real-time face-matching
+    // model behind this; building one is a separate, much bigger project.
+    // If we ever add real re-verification, it goes here — deliberately not
+    // faked with a random pass/fail in the meantime. ──
     let cameraStream = null;
-    let monitorInterval = null;
-    let mismatchCount = 0;
-
     async function startAmbientMonitor() {
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-        } catch(e) {
-            showToast('Camera access is required to keep using Gulece', '⚠️');
-            return;
+        } catch (e) {
+            return; // No camera available — app still works, just no indicator.
         }
         const vid = document.getElementById('ambientVid');
         if (vid) vid.srcObject = cameraStream;
-
         if (!document.getElementById('monitorDot')) {
             const dot = document.createElement('div');
             dot.className = 'monitor-dot'; dot.id = 'monitorDot';
-            dot.title = 'Camera active — verifying identity continuously';
+            dot.title = 'Camera active';
             document.body.appendChild(dot);
         }
-
         cameraStream.getVideoTracks().forEach(track => {
             track.onended = () => { cameraStream = null; startAmbientMonitor(); };
         });
-
-        if (monitorInterval) clearInterval(monitorInterval);
-        monitorInterval = setInterval(() => {
-            // Production: capture a frame, send to the ML same-person
-            // endpoint, compare against the verified face embedding.
-            const matched = Math.random() > 0.02;
-            if (!matched) {
-                mismatchCount++;
-                showToast("Identity check failed — please verify it's you", "⚠️");
-                if (mismatchCount >= 3) lockSession();
-            } else { mismatchCount = 0; }
-        }, 45000);
     }
 
-    function lockSession() {
-        clearInterval(monitorInterval);
-        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-        const lock = document.createElement('div');
-        lock.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:white;text-align:center;padding:32px;';
-        lock.innerHTML = '<div style="font-size:3rem">🔒</div><h2>Session paused</h2><p style="font-size:0.88rem;opacity:0.7;max-width:280px">Our system could not verify your identity. Gulece is for sisters only.</p><button onclick="location.reload()" style="background:#c17a62;border:none;padding:14px 28px;border-radius:40px;color:white;font-size:1rem;font-weight:600;cursor:pointer;">Re-verify Identity</button>';
-        document.body.appendChild(lock);
-    }
+    (async function gate() {
+        const me = await checkSession();
+        if (!me) { window.location.href = 'verification.html'; return; }
+        currentUser.name = me.name;
+        currentUser.username = me.name.toLowerCase().replace(/\s+/g, '_');
 
-    // Intro overlay (shows every time) — original, untouched.
-    const introDiv = document.createElement('div');
-    introDiv.className = 'intro-overlay';
-    introDiv.id = 'introOverlay';
-    introDiv.innerHTML = `
-        <div class="intro-card">
-            <div class="intro-logo-custom">
-                <span class="intro-logo-gul">Gul</span>
-                <span class="intro-logo-ece">ECE</span>
+        // Intro overlay (shows every time) — original, untouched.
+        const introDiv = document.createElement('div');
+        introDiv.className = 'intro-overlay';
+        introDiv.id = 'introOverlay';
+        introDiv.innerHTML = `
+            <div class="intro-card">
+                <div class="intro-logo-custom">
+                    <span class="intro-logo-gul">Gul</span>
+                    <span class="intro-logo-ece">ECE</span>
+                </div>
+                <div class="intro-verse">
+                    ✨ "And tell the believing women to lower their gaze and guard their modesty..." — Qur'an 24:31 ✨
+                </div>
+                <div class="intro-note">
+                    🌸 A private sanctuary for Muslim women.<br>
+                    Your face, your voice, your soul — seen only by sisters.
+                </div>
+                <button class="enter-btn" id="enterGuleceBtn">🌸 Enter Gulece</button>
             </div>
-            <div class="intro-verse">
-                ✨ "And tell the believing women to lower their gaze and guard their modesty..." — Qur'an 24:31 ✨
-            </div>
-            <div class="intro-note">
-                🌸 A private sanctuary for Muslim women.<br>
-                Your face, your voice, your soul — seen only by sisters.<br>
-                <strong>Future verification</strong> will ensure this remains a safe, women-only space.
-            </div>
-            <button class="enter-btn" id="enterGuleceBtn">🌸 Enter Gulece</button>
-        </div>
-    `;
-    document.body.appendChild(introDiv);
-    document.getElementById('enterGuleceBtn').addEventListener('click', () => {
-        introDiv.style.opacity = '0';
-        setTimeout(() => {
-            introDiv.remove();
-            window.initAppAfterIntro();
-            setTimeout(() => startAmbientMonitor(), 1000);
-        }, 500);
-    });
+        `;
+        document.body.appendChild(introDiv);
+        document.getElementById('enterGuleceBtn').addEventListener('click', () => {
+            introDiv.style.opacity = '0';
+            setTimeout(() => {
+                introDiv.remove();
+                window.initAppAfterIntro();
+                startAmbientMonitor();
+            }, 500);
+        });
+    })();
 </script>
 </body>
 </html>

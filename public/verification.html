@@ -40,6 +40,7 @@
     .notice { background:var(--accent-soft); border-radius:18px; padding:13px 15px; font-size:0.8rem; color:var(--text); margin-bottom:14px; line-height:1.6; }
     input { width:100%; padding:13px 16px; border-radius:30px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-size:0.95rem; margin-bottom:10px; font-family:var(--font); }
     input:focus { outline:none; border-color:var(--accent); }
+    input:disabled { opacity:0.6; }
     .btn { width:100%; padding:14px; border-radius:60px; border:none; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; font-size:1rem; font-weight:600; cursor:pointer; margin-top:8px; transition:transform 0.1s, opacity 0.2s; }
     .btn:active { transform:scale(0.97); }
     .btn:disabled { opacity:0.45; cursor:not-allowed; }
@@ -47,8 +48,16 @@
     .cam-box { width:100%; aspect-ratio:3/4; background:#0e0c0a; border-radius:24px; overflow:hidden; position:relative; margin-bottom:14px; display:flex; align-items:center; justify-content:center; }
     .cam-box video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
     .cam-placeholder { color:rgba(255,255,255,0.5); font-size:0.85rem; text-align:center; padding:20px; }
-    .cam-ring { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:50%; border:2.5px dashed rgba(255,255,255,0.45); pointer-events:none; animation:ringPulse 2s linear infinite; }
-    @keyframes ringPulse { 0%,100%{border-color:rgba(255,255,255,0.3)} 50%{border-color:rgba(193,122,98,0.85)} }
+    .cam-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(74%, 260px); aspect-ratio:3/4; pointer-events:none; }
+    .cam-ring { position:absolute; inset:0; border-radius:50%; border:2.5px dashed rgba(255,255,255,0.5); overflow:hidden; animation:ringPulse 2s linear infinite; }
+    @keyframes ringPulse { 0%,100%{border-color:rgba(255,255,255,0.3)} 50%{border-color:rgba(193,122,98,0.9)} }
+    .cam-scan-line { position:absolute; left:-15%; right:-15%; height:3px; background:linear-gradient(90deg,transparent,rgba(193,122,98,0.95),transparent); box-shadow:0 0 14px 3px rgba(193,122,98,0.75); animation:scanSweep 2.2s ease-in-out infinite; }
+    @keyframes scanSweep { 0%{top:4%} 50%{top:94%} 100%{top:4%} }
+    .cam-bracket { position:absolute; width:22px; height:22px; border-color:var(--accent); border-style:solid; border-width:0; opacity:0.9; }
+    .cam-bracket.tl { top:-10px; left:-10px; border-top-width:3px; border-left-width:3px; border-top-left-radius:6px; }
+    .cam-bracket.tr { top:-10px; right:-10px; border-top-width:3px; border-right-width:3px; border-top-right-radius:6px; }
+    .cam-bracket.bl { bottom:-10px; left:-10px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:6px; }
+    .cam-bracket.br { bottom:-10px; right:-10px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:6px; }
     .cam-hint { position:absolute; bottom:14px; left:0; right:0; text-align:center; color:white; font-size:0.78rem; font-weight:500; text-shadow:0 1px 4px rgba(0,0,0,0.8); }
     .rec-btn { width:66px; height:66px; border-radius:50%; border:none; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); font-size:1.5rem; cursor:pointer; display:block; margin:0 auto 12px; box-shadow:0 4px 16px rgba(193,122,98,0.45); transition:transform 0.1s; color:white; }
     .rec-btn:disabled { opacity:0.4; cursor:not-allowed; }
@@ -78,7 +87,7 @@
         <div class="logo"><span class="gul">Gul</span><span class="ece">ECE</span></div>
         <div class="tagline">your space to bloom 🌸</div>
         <div class="verse">"And tell the believing women to lower their gaze and guard their modesty…" — Qur'an 24:31</div>
-        <div class="notice">🕌 Gulece is a <strong>sisters-only</strong> sanctuary. Every member is verified as a woman by our AI before getting access — your account is not created until that review passes.</div>
+        <div class="notice">🕌 Gulece is a <strong>sisters-only</strong> sanctuary. Every member is reviewed by a real person on our team before their account is created.</div>
         <input id="i_name" type="text" placeholder="Your name" autocomplete="name">
         <input id="i_email" type="email" placeholder="Email address" autocomplete="email">
         <input id="i_pass" type="password" placeholder="Create a password" autocomplete="new-password">
@@ -91,11 +100,15 @@
     <div class="step" id="s2">
         <div class="progress"><div class="dot done"></div><div class="dot done"></div><div class="dot" id="pd3b"></div><div class="dot" id="pd4b"></div></div>
         <div class="title">📹 Face verification</div>
-        <div class="sub">We need camera access to record a 5-second video. Our AI checks it's a real woman's face. The video is uploaded for review and not kept after that.</div>
+        <div class="sub">We need camera access to record a 5-second video. A real person on our team reviews it before your account is created. The video is kept only for that review.</div>
         <div class="cam-box" id="camBox">
             <div class="cam-placeholder" id="camPlaceholder">Tap below to allow camera access</div>
             <video id="camFeed" autoplay muted playsinline style="display:none;"></video>
-            <div class="cam-ring" id="camRing" style="display:none;"></div>
+            <div class="cam-frame" id="camFrame" style="display:none;">
+                <div class="cam-ring"><div class="cam-scan-line"></div></div>
+                <span class="cam-bracket tl"></span><span class="cam-bracket tr"></span>
+                <span class="cam-bracket bl"></span><span class="cam-bracket br"></span>
+            </div>
             <div class="cam-hint" id="camHint" style="display:none;"></div>
         </div>
         <div class="rec-timer" id="recTimer"></div>
@@ -110,15 +123,16 @@
     <div class="step" id="s3">
         <div class="progress"><div class="dot done"></div><div class="dot done"></div><div class="dot done"></div><div class="dot" id="pd4c"></div></div>
         <div class="title">🪪 Speed up verification</div>
-        <div class="sub">AI review normally takes <strong>8 hours – 3 days</strong>. Upload any government ID to fast-track to 2–8 hours. Completely optional.</div>
+        <div class="sub">Our reviewer usually gets to new signups within <strong>24–48 hours</strong>. Uploading a government ID helps them confirm it's you faster. Completely optional.</div>
         <div class="id-zone" id="idZone">
             <div style="font-size:1.8rem">🪪</div>
             <div><strong>Upload legal ID</strong></div>
             <div style="font-size:0.75rem;margin-top:3px">Passport · National ID · Driver's licence</div>
-            <div style="font-size:0.72rem;margin-top:2px;opacity:0.7">End-to-end encrypted · deleted after review</div>
+            <div style="font-size:0.72rem;margin-top:2px;opacity:0.7">Only seen by our reviewer · deleted after review</div>
         </div>
         <input type="file" id="idInput" accept="image/*,application/pdf" style="display:none;">
-        <div class="notice">🔒 Stored encrypted, deleted automatically after verification.</div>
+        <div class="notice">🔒 Only accessible to our reviewer, never public, deleted after verification.</div>
+        <div class="error-text" id="e3"></div>
         <button class="btn" id="submitReviewBtn">Submit for review →</button>
         <button class="btn-ghost" id="skipIdBtn">Skip — I'll wait</button>
         <button class="btn-ghost" id="backTo2Btn">← Back</button>
@@ -130,39 +144,53 @@
         <div class="pending-box">
             <div style="font-size:2.8rem;margin-bottom:10px">⏳</div>
             <div class="title" style="margin-bottom:4px">Verification submitted</div>
-            <p style="font-size:0.83rem;color:var(--text-secondary);line-height:1.5">Your account has <strong>not</strong> been created yet. We're reviewing your video — you'll get an email the moment it's approved.</p>
+            <p style="font-size:0.83rem;color:var(--text-secondary);line-height:1.5">Your account has <strong>not</strong> been created yet. A real person on our team reviews your video — you'll be able to sign in the moment it's approved.</p>
         </div>
         <div class="pending-steps">
             <div class="pending-row"><div class="pending-dot done">✓</div><span>Details received</span></div>
             <div class="pending-row"><div class="pending-dot done">✓</div><span>Face video uploaded</span></div>
-            <div class="pending-row"><div class="pending-dot active" id="aiDot">⏳</div><span id="aiLabel">AI gender analysis underway</span></div>
+            <div class="pending-row"><div class="pending-dot active" id="aiDot">⏳</div><span id="aiLabel">Manual review in progress</span></div>
             <div class="pending-row"><div class="pending-dot wait">4</div><span>Account created &amp; access granted</span></div>
         </div>
-        <div class="notice">⏱️ <strong>Estimated:</strong> <span id="estTime">8 hours – 3 days</span><br>We'll email <strong id="pendEmail"></strong> when your account is ready.</div>
+        <div class="notice">⏱️ Reviews are done by hand, usually within <strong>24–48 hours</strong>.</div>
         <button class="btn-ghost" id="checkStatusBtn">Check status</button>
         <p class="footnote" id="startOverLink"><span>Start over</span></p>
+    </div>
+
+    <!-- STEP 5: Approved — real login required to actually get in -->
+    <div class="step" id="s5">
+        <div class="title">🎉 You're verified!</div>
+        <div class="sub">Welcome to Gulece. Sign in with the password you created to enter.</div>
+        <input id="li_email" type="email" placeholder="Email address" autocomplete="email">
+        <input id="li_pass" type="password" placeholder="Password" autocomplete="current-password">
+        <div class="error-text" id="e5"></div>
+        <button class="btn" id="loginBtn">Sign in →</button>
+    </div>
+
+    <!-- STEP 6: Rejected -->
+    <div class="step" id="s6">
+        <div class="title">We couldn't verify your account</div>
+        <div class="sub">Our reviewer wasn't able to confirm your account this time. You're welcome to try again with a clearer video.</div>
+        <button class="btn" id="startOverBtn6">Start over</button>
     </div>
 
 </div>
 
 <script>
-    const AUTH_KEY = 'gulece_auth_v1';
-    const PENDING_KEY = 'gulece_pending_v1';
-    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; } };
-    const setAuth = (s) => localStorage.setItem(AUTH_KEY, JSON.stringify(s));
-    const getPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY)); } catch { return null; } };
-    const setPending = (s) => localStorage.setItem(PENDING_KEY, JSON.stringify(s));
-    const clearPending = () => localStorage.removeItem(PENDING_KEY);
+    const PENDING_TOKEN_KEY = 'gulece_pending_token';
 
-    let signup = { name:'', email:'', password:'', hasId:false, idName:'' };
+    let signup = { name:'', email:'', password:'' };
     let camStream = null;
     let mediaRecorder = null;
     let recordedChunks = [];
     let recTimer = null;
     let recSecs = 0;
+    let verificationVideoBlob = null;
+    let idFile = null;
+    let statusPollTimer = null;
 
-    function goStep(n) {
-        document.querySelectorAll('.step').forEach((el,i) => el.classList.toggle('active', i+1===n));
+    function goStep(id) {
+        document.querySelectorAll('.step').forEach(el => el.classList.toggle('active', el.id === id));
         document.getElementById('card').scrollTop = 0;
     }
 
@@ -177,19 +205,15 @@
         if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         err.textContent = '';
         signup.name = name; signup.email = email; signup.password = pass;
-        goStep(2);
+        goStep('s2');
     });
 
+    // Reuse the sign-in step for the "Already verified? Sign in" link too.
     document.getElementById('goLogin').addEventListener('click', () => {
-        // A verified login still requires the account to actually exist —
-        // for this prototype, "login" means resuming a session that
-        // already passed verification on this device.
-        const auth = getAuth();
-        if (auth && auth.status === 'verified') {
-            window.location.href = 'index.html';
-        } else {
-            document.getElementById('e1').textContent = 'No verified account found on this device yet. Please complete verification below.';
-        }
+        document.getElementById('li_email').value = signup.email || '';
+        document.getElementById('li_pass').value = '';
+        document.getElementById('e5').textContent = '';
+        goStep('s5');
     });
 
     // ── STEP 2: camera permission requested ONLY on direct button click ──
@@ -200,16 +224,24 @@
             camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 720, height: 960 }, audio: false });
         } catch (e) {
             btn.disabled = false; btn.textContent = 'Allow camera access';
-            document.getElementById('camPlaceholder').textContent = 'Camera permission denied. Please allow camera access in your browser settings and try again.';
+            const messages = {
+                NotAllowedError: 'Camera permission was denied or blocked for this site. Check the camera icon in your browser\'s address bar and allow access, then try again.',
+                NotFoundError: 'No camera was found on this device.',
+                NotReadableError: 'Your camera is already in use by another app (e.g. Zoom, Teams). Close it and try again.',
+                OverconstrainedError: 'This camera doesn\'t support the requested settings.',
+                SecurityError: 'Camera access requires a secure connection (https:// or http://localhost).'
+            };
+            document.getElementById('camPlaceholder').textContent = messages[e.name] || `Camera error: ${e.name || e.message}`;
+            console.error('getUserMedia failed:', e.name, e.message);
             return;
         }
         const feed = document.getElementById('camFeed');
         feed.srcObject = camStream;
         feed.style.display = 'block';
         document.getElementById('camPlaceholder').style.display = 'none';
-        document.getElementById('camRing').style.display = 'block';
+        document.getElementById('camFrame').style.display = 'block';
         document.getElementById('camHint').style.display = 'block';
-        document.getElementById('camHint').textContent = 'Position your face in the circle';
+        document.getElementById('camHint').textContent = 'Position your face in the frame';
         btn.style.display = 'none';
         const recBtn = document.getElementById('recBtn');
         recBtn.style.display = 'block';
@@ -226,9 +258,8 @@
         catch(e) { mediaRecorder = new MediaRecorder(camStream); }
         mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            saveVerificationVideo(blob);
-            setText('recStatus', '✅ Video captured and saved for review');
+            verificationVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            setText('recStatus', '✅ Video captured');
             setProp('toStep3Btn', 'disabled', false);
             setText('recBtn', '🔄');
             const btn = document.getElementById('recBtn'); if (btn) btn.classList.remove('recording');
@@ -255,21 +286,6 @@
     function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
     function setProp(id, prop, val) { const el = document.getElementById(id); if (el) el[prop] = val; }
 
-    // ── Save captured face video as a downloadable file into /video ──
-    // Static prototypes can't write to a server folder, so this offers the
-    // actual file for download into your local /video directory, and also
-    // keeps an in-memory + localStorage record of when it was captured.
-    function saveVerificationVideo(blob) {
-        const filename = `verification_${Date.now()}.webm`;
-        const url = URL.createObjectURL(blob);
-        window.__lastVerificationVideo = { filename, url, sizeBytes: blob.size, capturedAt: Date.now() };
-        // Auto-download into the visitor's Downloads folder; move the file
-        // into /video manually, or wire this up to a real upload endpoint.
-        const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); a.remove();
-    }
-
     function stopCameraStream() {
         if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
     }
@@ -277,22 +293,22 @@
     document.getElementById('toStep3Btn').addEventListener('click', () => {
         clearInterval(recTimer);
         stopCameraStream();
-        goStep(3);
+        goStep('s3');
     });
 
     document.getElementById('backTo1Btn').addEventListener('click', () => {
         clearInterval(recTimer);
         stopCameraStream();
-        goStep(1);
+        goStep('s1');
     });
 
-    document.getElementById('backTo2Btn').addEventListener('click', () => goStep(2));
+    document.getElementById('backTo2Btn').addEventListener('click', () => goStep('s2'));
 
     // ── STEP 3: ID upload ──
     document.getElementById('idZone').addEventListener('click', () => document.getElementById('idInput').click());
     document.getElementById('idInput').addEventListener('change', (e) => {
         const file = e.target.files[0]; if (!file) return;
-        signup.hasId = true; signup.idName = file.name;
+        idFile = file;
         const z = document.getElementById('idZone');
         z.classList.add('uploaded');
         z.innerHTML = `<div style="font-size:1.6rem">✅</div><div><strong>${file.name}</strong></div><div style="font-size:0.75rem;margin-top:3px;color:var(--accent)">ID uploaded — faster review</div>`;
@@ -301,68 +317,101 @@
     document.getElementById('submitReviewBtn').addEventListener('click', submitForReview);
     document.getElementById('skipIdBtn').addEventListener('click', submitForReview);
 
-    // ── STEP 4: real pending state — NO shortcut creates the account ──
-    function submitForReview() {
-        const submittedAt = Date.now();
-        const reviewMs = signup.hasId
-            ? (2 + Math.random() * 6) * 3600 * 1000     // 2–8 hours
-            : (8 + Math.random() * (72-8)) * 3600 * 1000; // 8h–3d
-        setPending({
-            name: signup.name, email: signup.email, hasId: signup.hasId,
-            submittedAt, reviewReadyAt: submittedAt + reviewMs
-        });
-        document.getElementById('estTime').textContent = signup.hasId ? '2–8 hours' : '8 hours – 3 days';
-        if (signup.hasId) {
-            document.getElementById('aiDot').textContent = '⚡';
-            document.getElementById('aiLabel').textContent = 'AI + ID fast-track review';
-        }
-        document.getElementById('pendEmail').textContent = signup.email;
-        goStep(4);
-    }
+    // ── STEP 4: real submission — account is created server-side as PENDING only ──
+    async function submitForReview() {
+        const err = document.getElementById('e3');
+        if (!verificationVideoBlob) { err.textContent = 'Please go back and record your face verification video.'; return; }
+        err.textContent = '';
+        const btn = document.getElementById('submitReviewBtn');
+        btn.disabled = true; btn.textContent = 'Submitting…';
 
-    document.getElementById('checkStatusBtn').addEventListener('click', checkReviewStatus);
+        const form = new FormData();
+        form.append('name', signup.name);
+        form.append('email', signup.email);
+        form.append('password', signup.password);
+        form.append('video', verificationVideoBlob, 'verification.webm');
+        if (idFile) form.append('idDoc', idFile);
 
-    function checkReviewStatus() {
-        const p = getPending();
-        if (!p) { goStep(1); return; }
-        const now = Date.now();
-        if (now >= p.reviewReadyAt) {
-            // Review complete — NOW the account is actually created.
-            setAuth({ status: 'verified', name: p.name, email: p.email, verifiedAt: now });
-            clearPending();
-            window.location.href = 'index.html';
-        } else {
-            const remainingMin = Math.ceil((p.reviewReadyAt - now) / 60000);
-            const btn = document.getElementById('checkStatusBtn');
-            btn.textContent = remainingMin > 60
-                ? `Still reviewing — about ${Math.ceil(remainingMin/60)}h left`
-                : `Still reviewing — about ${remainingMin}m left`;
-            setTimeout(() => { btn.textContent = 'Check status'; }, 2500);
+        try {
+            const res = await fetch('/api/signup', { method: 'POST', body: form });
+            const data = await res.json();
+            if (!res.ok) { err.textContent = data.error || 'Something went wrong. Please try again.'; btn.disabled = false; btn.textContent = 'Submit for review →'; return; }
+            localStorage.setItem(PENDING_TOKEN_KEY, data.pendingToken);
+            if (idFile) {
+                document.getElementById('aiDot').textContent = '⚡';
+                document.getElementById('aiLabel').textContent = 'Priority manual review (ID provided)';
+            }
+            goStep('s4');
+        } catch (e) {
+            err.textContent = 'Could not reach the server. Please try again.';
+            btn.disabled = false; btn.textContent = 'Submit for review →';
         }
     }
 
-    document.getElementById('startOverLink').addEventListener('click', () => {
-        clearPending();
-        localStorage.removeItem(AUTH_KEY);
+    document.getElementById('checkStatusBtn').addEventListener('click', () => checkReviewStatus(true));
+
+    async function checkReviewStatus(manual) {
+        const token = localStorage.getItem(PENDING_TOKEN_KEY);
+        if (!token) { goStep('s1'); return; }
+        const btn = document.getElementById('checkStatusBtn');
+        try {
+            const res = await fetch(`/api/status?token=${encodeURIComponent(token)}`);
+            if (!res.ok) { if (manual) { btn.textContent = 'Still reviewing'; setTimeout(() => btn.textContent = 'Check status', 2000); } return; }
+            const data = await res.json();
+            if (data.status === 'verified') {
+                clearInterval(statusPollTimer);
+                document.getElementById('li_email').value = data.email || signup.email || '';
+                goStep('s5');
+            } else if (data.status === 'rejected') {
+                clearInterval(statusPollTimer);
+                goStep('s6');
+            } else if (manual) {
+                btn.textContent = 'Still reviewing — check back soon';
+                setTimeout(() => btn.textContent = 'Check status', 2500);
+            }
+        } catch (e) { /* offline — silently retry on next poll */ }
+    }
+
+    document.getElementById('startOverLink').addEventListener('click', startOver);
+    document.getElementById('startOverBtn6').addEventListener('click', startOver);
+    function startOver() {
+        localStorage.removeItem(PENDING_TOKEN_KEY);
+        clearInterval(statusPollTimer);
         location.reload();
+    }
+
+    // ── STEP 5: real login — this is the only way an account actually gets used ──
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        const email = document.getElementById('li_email').value.trim() || signup.email;
+        const password = document.getElementById('li_pass').value;
+        const err = document.getElementById('e5');
+        if (!email || !password) { err.textContent = 'Enter your email and password.'; return; }
+        try {
+            const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.removeItem(PENDING_TOKEN_KEY);
+                window.location.href = 'index.html';
+            } else if (res.status === 403) {
+                err.textContent = 'Your account is still pending review.';
+            } else {
+                err.textContent = data.error || 'Invalid email or password.';
+            }
+        } catch (e) { err.textContent = 'Could not reach the server. Please try again.'; }
     });
 
-    // ── Resume an in-progress (pending) verification on reload ──
-    (function init() {
-        const auth = getAuth();
-        if (auth && auth.status === 'verified') {
-            window.location.href = 'index.html';
-            return;
-        }
-        const p = getPending();
-        if (p) {
-            document.getElementById('estTime').textContent = p.hasId ? '2–8 hours' : '8 hours – 3 days';
-            if (p.hasId) {
-                document.getElementById('aiDot').textContent = '⚡';
-                document.getElementById('aiLabel').textContent = 'AI + ID fast-track review';
-            }
-            document.getElementById('pendEmail').textContent = p.email;
-            goStep(4);
+    // ── Resume: already logged in? already pending? show the right screen. ──
+    (async function init() {
+        try {
+            const me = await fetch('/api/me');
+            if (me.ok) { window.location.href = 'index.html'; return; }
+        } catch (e) {}
+
+        const token = localStorage.getItem(PENDING_TOKEN_KEY);
+        if (token) {
+            goStep('s4');
+            await checkReviewStatus(false);
+            statusPollTimer = setInterval(() => checkReviewStatus(false), 30000);
         }
     })();
 </script>
