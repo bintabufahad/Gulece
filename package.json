@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Gulece — a private, women-only space to share and connect",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.17"
+  },
   "scripts": {
     "start": "node server.js"
   },

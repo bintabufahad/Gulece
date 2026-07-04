@@ -47,11 +47,22 @@ There is no fake AI and no automatic timer. When someone signs up:
    `ADMIN_PASSWORD`, watch the video, and click Approve or Reject.
 4. Only after you approve can that person actually sign in.
 
-## Deploying
+## Deploying on Render
+
+This repo includes `render.yaml`, so Render can configure itself:
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**.
+2. Connect your GitHub account (if not already) and select the `Gulece` repo.
+3. Render reads `render.yaml` and proposes a "gulece" web service on the free
+   plan. Click through to create it.
+4. It will pause and ask you to fill in three environment variables (kept
+   secret, not stored in the repo): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `ADMIN_PASSWORD` — same values as your local `.env`.
+5. Deploy. Render will run `npm install` then `npm start`, and pings
+   `/healthz` to confirm the app can reach Supabase before marking it live.
+6. Your app is now at `https://gulece-xxxx.onrender.com` (or a custom domain
+   you attach in Render's settings). Admin review is at `/admin.html` on that
+   same URL.
 
 The app server itself is stateless (all data/files live in Supabase), so it
-can run on any Node host — Render, Railway, Fly.io, etc. — and be scaled to
-multiple instances behind that platform's load balancer with no extra setup.
-Set real environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`ADMIN_PASSWORD`) in your hosting platform's dashboard rather than committing
-`.env`.
+can be scaled to multiple Render instances later with no extra setup.
