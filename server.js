@@ -112,10 +112,16 @@ app.post('/api/signup', signupLimiter,
             if (idErr) { req.log.error(idErr); idPath = null; } // ID upload is optional — don't fail signup over it.
         }
 
+        // The app owner's own account skips the review queue — reviewing
+        // yourself before you're allowed to use your own app isn't useful.
+        const isAdminAccount = process.env.ADMIN_EMAIL && normalizedEmail === process.env.ADMIN_EMAIL.trim().toLowerCase();
+
         const passwordHash = bcrypt.hashSync(password, 10);
         const { data: inserted, error: insertErr } = await supabase.from('app_users').insert({
             id: userId, name, email: normalizedEmail, password_hash: passwordHash,
-            status: 'pending', has_id: !!idPath, video_path: videoPath, id_path: idPath
+            status: isAdminAccount ? 'verified' : 'pending',
+            has_id: !!idPath, video_path: videoPath, id_path: idPath,
+            reviewed_at: isAdminAccount ? new Date().toISOString() : null
         }).select('pending_token').single();
         if (insertErr) { req.log.error(insertErr); return res.status(500).json({ error: 'Something went wrong. Please try again.' }); }
 

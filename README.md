@@ -21,7 +21,11 @@ storage, free to start, no Docker or local database install required.
    SUPABASE_URL=...
    SUPABASE_SERVICE_ROLE_KEY=...
    ADMIN_PASSWORD=pick-a-real-password
+   ADMIN_EMAIL=your-real-email@example.com
    ```
+   `ADMIN_EMAIL` is optional but recommended — sign up with that exact email
+   and your own account skips the review queue instantly, so you're not
+   stuck waiting on yourself to approve yourself.
 
 ## Running locally
 
